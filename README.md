@@ -13,9 +13,19 @@ Network-Engineering-Collaboration-Platform/
 │   └── requirements.txt    # Python依赖
 ├── frontend/               # Vue3前端项目
 │   ├── src/                # 源代码目录
-│   │   ├── views/          # 页面组件
 │   │   ├── router/         # 路由配置
-│   │   └── main.js         # 入口文件
+|   │   │   └── index.js
+|   │   ├── components/     # 公共组件
+|   │   ├── pages/          # 页面组件
+|  `│   ├── store/          # Pinia状态管理
+|   │   │    ├── user.js     # 用户状态
+|   │   │    ├── project.js  # 项目状态
+|   │   │    └──index.js
+|   │   ├── utils/          # 工具函数
+|   │   │   └── index.js
+|   │   ├── App.vue         # 根组件
+|   │   ├── main.js         # 入口文件
+|   │   └── style.css       # 全局样式
 │   ├── package.json        # Node.js依赖
 │   └── vite.config.js      # Vite配置
 └── README.md               # 项目说明文档
@@ -128,7 +138,11 @@ npm run dev
 ### 前端开发
 - 入口文件: `frontend/src/main.js`
 - 路由配置: `frontend/src/router/index.js`
-- 页面组件: `frontend/src/views/`
+- 页面组件: `frontend/src/pages/`
+- 公共组件: `frontend/src/components/`
+- api接口封装: `frontend/src/api/
+**详细参考PROJECT_STRUCTURE.md**
+
 
 ### CORS配置
 后端已配置CORS，允许来自前端开发服务器的请求。如需修改，请编辑 `backend/config/settings.py` 中的 `CORS_ALLOWED_ORIGINS`。
