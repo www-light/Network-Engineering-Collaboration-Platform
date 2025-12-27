@@ -147,7 +147,7 @@ python manage.py collectstatic
 ### 前端
 ```bash
 cd frontend
-npm run build
+npm run dev
 ```
 
 构建产物将在 `frontend/dist/` 目录中。
