@@ -19,7 +19,8 @@
             @submit.prevent="handleLogin"
           >
             <el-form-item label="身份" prop="identity">
-              <el-radio-group v-model="form.identity">
+              <el-radio-group v-model="form.identity"
+              data-testid="identity-select">
                 <el-radio :label="0">
                   <el-icon><User /></el-icon>
                   学生

@@ -20,5 +20,9 @@ export default defineConfig({
         rewrite: path => path.replace(/^\/api/, ''),
       }
     }
-  }
+  },
+  test: {
+    environment: 'jsdom', // 必须加上这个，否则无法测试组件
+    globals: true,        // 开启后，你就不需要在测试文件里手动 import describe, it 了
+  },
 })
