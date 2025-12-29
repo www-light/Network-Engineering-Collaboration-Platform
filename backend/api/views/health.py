@@ -10,4 +10,3 @@ def health_check(request):
         'status': 'success',
         'message': 'Django后端服务运行正常'
     }, status=status.HTTP_200_OK)
-
