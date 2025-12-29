@@ -7,13 +7,14 @@ from rest_framework import status
 from ..models.post import PostEntity
 from ..models.user import User
 from ..models.interaction import Like, Favorite, Comment
-
+from ..utils.auth import login_required
 
 def ok():
     return Response({"code": 200}, status=status.HTTP_200_OK)
 
 
 @api_view(["POST"])
+@login_required
 def like(request):
     post_id = request.data.get("post_id")
     user_id = request.data.get("user_id")
@@ -41,6 +42,7 @@ def like(request):
 
 
 @api_view(["POST"])
+@login_required
 def favorite(request):
     post_id = request.data.get("post_id")
     user_id = request.data.get("user_id")
@@ -65,6 +67,7 @@ def favorite(request):
 
 
 @api_view(["POST"])
+@login_required
 def comment(request):
     post_id = request.data.get("post_id")
     user_id = request.data.get("user_id")
