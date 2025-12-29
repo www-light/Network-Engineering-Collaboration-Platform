@@ -88,12 +88,12 @@
               label="年级"
               prop="extra.grade"
             >
-              <el-input
-                v-model="form.extra.grade"
-                placeholder="请输入年级"
-                clearable
-                size="large"
-              />
+              <el-select v-model="form.extra.grade" placeholder="请选择年级" size="large" style="width: 100%">
+                <el-option label="大一" :value="1" />
+                <el-option label="大二" :value="2" />
+                <el-option label="大三" :value="3" />
+                <el-option label="大四" :value="4" />
+              </el-select>
             </el-form-item>
             <el-form-item
               v-if="form.identity === 1"
@@ -204,7 +204,7 @@ const handleRegister = async () => {
           name: form.name,
           password: form.password,
           extra: form.identity === 0
-            ? { grade: form.extra.grade }
+            ? { grade: Number(form.extra.grade) }
             : { title: form.extra.title }
         }
         await userStore.registerUser(registerData)

@@ -4,7 +4,7 @@ import request from './request'
 export const login = (data) => {
   return request({
     url: '/auth/login',
-    method: 'GET',
+    method: 'POST',
     params: data
   })
 }
