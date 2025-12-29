@@ -81,15 +81,16 @@ cp .env.example .env    # Linux/Mac
 
 5. 运行数据库迁移：
 ```bash
+python manage.py makemigrations api
 python manage.py migrate
 ```
 
-6. 创建超级用户（可选）：
+1. 创建超级用户（可选）：
 ```bash
 python manage.py createsuperuser
 ```
 
-7. 启动开发服务器：
+1. 启动开发服务器：
 ```bash
 python manage.py runserver
 ```

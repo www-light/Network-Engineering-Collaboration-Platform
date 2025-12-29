@@ -71,22 +71,22 @@ const router = createRouter({
 
 // 路由守卫
 router.beforeEach((to, from, next) => {
-  // const userStore = useUserStore()
+  const userStore = useUserStore()
   
-  // // 初始化用户信息
-  // if (!userStore.isLoggedIn) {
-  //   userStore.init()
-  // }
+  // 初始化用户信息
+  if (!userStore.isLoggedIn) {
+    userStore.init()
+  }
 
-  // // 检查是否需要登录
-  // if (to.meta.requiresAuth && !userStore.isLoggedIn) {
-  //   next({ name: 'Login', query: { redirect: to.fullPath } })
-  // } else if (to.name === 'Login' && userStore.isLoggedIn) {
-  //   next({ name: 'Home' })
-  // } else {
-  //   next()
-  // }
-  next()//暂时直接放行
+  // 检查是否需要登录
+  if (to.meta.requiresAuth && !userStore.isLoggedIn) {
+    next({ name: 'Login', query: { redirect: to.fullPath } })
+  } else if (to.name === 'Login' && userStore.isLoggedIn) {
+    next({ name: 'Home' })
+  } else {
+    next()
+  }
+  // next()//暂时直接放行
 })
 
 export default router
