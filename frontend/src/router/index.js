@@ -79,14 +79,14 @@ router.beforeEach((to, from, next) => {
   }
 
   // 检查是否需要登录
-  if (to.meta.requiresAuth && !userStore.isLoggedIn) {
-    next({ name: 'Login', query: { redirect: to.fullPath } })
-  } else if (to.name === 'Login' && userStore.isLoggedIn) {
-    next({ name: 'Home' })
-  } else {
-    next()
-  }
-  // next()//暂时直接放行
+  // if (to.meta.requiresAuth && !userStore.isLoggedIn) {
+  //   next({ name: 'Login', query: { redirect: to.fullPath } })
+  // } else if (to.name === 'Login' && userStore.isLoggedIn) {
+  //   next({ name: 'Home' })
+  // } else {
+  //   next()
+  // }
+  next()//暂时直接放行
 })
 
 export default router

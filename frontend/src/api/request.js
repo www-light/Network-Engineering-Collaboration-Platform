@@ -31,6 +31,11 @@ service.interceptors.response.use(
   (response) => {
     const res = response.data
     
+    // 如果返回的code是201（创建成功），返回完整响应以便前端处理
+    if (res.code === 201) {
+      return res
+    }
+    
     // 如果返回的code不是200，则视为错误
     if (res.code !== undefined && res.code !== 200) {
       ElMessage.error(res.msg || '请求失败')

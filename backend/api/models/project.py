@@ -94,7 +94,7 @@ class SkillInformation(models.Model):
     skill = models.CharField(max_length=255, verbose_name='技能')
     skill_degree = models.CharField(max_length=255, verbose_name='技能程度')
     project_experience = models.CharField(max_length=255, verbose_name='项目经验')
-    experience_file = models.CharField(max_length=255, blank=True, null=True, verbose_name='经验文件')
+    experience_link = models.CharField(max_length=255, blank=True, null=True, verbose_name='经验链接')
     habit_tag = models.CharField(max_length=255, verbose_name='习惯标签')
     spend_time = models.CharField(max_length=255, verbose_name='可投入时间')
     expect_worktype = models.CharField(max_length=255, verbose_name='期望工作类型')
