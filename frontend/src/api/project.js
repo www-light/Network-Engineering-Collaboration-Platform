@@ -3,7 +3,7 @@ import request from './request'
 // 获取项目列表
 export const getProjects = (params) => {
   return request({
-    url: '/projects',
+    url: '/project/list',
     method: 'GET',
     params
   })

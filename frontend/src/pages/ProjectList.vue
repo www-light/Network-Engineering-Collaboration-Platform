@@ -17,36 +17,38 @@
                 <el-option label="全部" value="all" />
                 <el-option label="科研项目" value="research" />
                 <el-option label="大创/竞赛" value="competition" />
-                <el-option label="个人项目" value="personal" />
+                <el-option label="个人技能" value="personal" />
               </el-select>
             </div>
           </template>
-          <div class="project-list">
-            <div v-if="projectStore.loading" class="loading-container">
-              <el-skeleton :rows="5" animated />
+          <div class="card-body-wrapper">
+            <div class="project-list">
+              <div v-if="projectStore.loading" class="loading-container">
+                <el-skeleton :rows="5" animated />
+              </div>
+              <div v-else-if="filteredProjects.length === 0" class="empty-container">
+                <el-empty description="暂无项目" />
+              </div>
+              <ProjectCard
+                v-else
+                v-for="project in paginatedProjects"
+                :key="project.post_id"
+                :project="project"
+                :is-active="selectedProjectId === project.post_id"
+                @click="handleProjectClick(project)"
+              />
             </div>
-            <div v-else-if="filteredProjects.length === 0" class="empty-container">
-              <el-empty description="暂无项目" />
+            <div class="pagination-container">
+              <el-pagination
+                v-model:current-page="currentPage"
+                v-model:page-size="pageSize"
+                :page-sizes="[10, 20, 50]"
+                :total="total"
+                layout="total, sizes, prev, pager, next"
+                @size-change="handleSizeChange"
+                @current-change="handlePageChange"
+              />
             </div>
-            <ProjectCard
-              v-else
-              v-for="project in paginatedProjects"
-              :key="project.post_id"
-              :project="project"
-              :is-active="selectedProjectId === project.post_id"
-              @click="handleProjectClick(project)"
-            />
-          </div>
-          <div class="pagination-container">
-            <el-pagination
-              v-model:current-page="currentPage"
-              v-model:page-size="pageSize"
-              :page-sizes="[10, 20, 50]"
-              :total="total"
-              layout="total, sizes, prev, pager, next"
-              @size-change="handleSizeChange"
-              @current-change="handlePageChange"
-            />
           </div>
         </el-card>
       </el-aside>
@@ -87,12 +89,8 @@ const detailLoading = ref(false)
 const currentPage = ref(1)
 const pageSize = ref(20)
 
-const filteredProjects = computed(() => {
-  if (selectedDirection.value === 'all') {
-    return projectStore.projects
-  }
-  return projectStore.projects.filter(p => p.post_type === selectedDirection.value)
-})
+// 由于后端已经支持筛选，这里直接使用store中的projects
+const filteredProjects = computed(() => projectStore.projects)
 
 const total = computed(() => filteredProjects.value.length)
 
@@ -110,7 +108,7 @@ onMounted(async () => {
 })
 
 const handleDirectionChange = async () => {
-  await projectStore.fetchProjects(selectedDirection.value)
+  await projectStore.fetchProjects(selectedDirection.value === 'all' ? null : selectedDirection.value)
   currentPage.value = 1
   if (filteredProjects.value.length > 0) {
     handleProjectClick(filteredProjects.value[0])
@@ -216,6 +214,21 @@ const handlePageChange = (page) => {
   flex-direction: column;
 }
 
+.aside-card :deep(.el-card__body) {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 0;
+  overflow: hidden;
+}
+
+.card-body-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
 .aside-header {
   display: flex;
   justify-content: space-between;
@@ -231,7 +244,8 @@ const handlePageChange = (page) => {
 .project-list {
   flex: 1;
   overflow-y: auto;
-  padding: 8px 0;
+  padding: 8px 12px;
+  min-height: 0; /* 确保flex子元素可以正确收缩 */
 }
 
 .loading-container,
@@ -240,10 +254,12 @@ const handlePageChange = (page) => {
 }
 
 .pagination-container {
-  margin-top: 16px;
+  flex-shrink: 0; /* 防止分页组件被压缩 */
   display: flex;
   justify-content: center;
-  padding: 16px 0;
+  padding: 16px;
+  border-top: 1px solid #e4e7ed;
+  background: white;
 }
 
 .detail-main {

@@ -11,31 +11,25 @@ export const useProjectStore = defineStore('project', () => {
   const fetchProjects = async (direction) => {
     loading.value = true
     try {
-      const data = await getProjects()
-      projects.value = data
+      // 构建查询参数，如果指定了方向则传递给后端
+      const params = direction && direction !== 'all' ? { post_type: direction } : {}
+      const data = await getProjects(params)
+      projects.value = data || []
       if (direction) {
         currentDirection.value = direction
       }
     } catch (error) {
       console.error('获取项目列表失败:', error)
+      projects.value = []
     } finally {
       loading.value = false
     }
   }
 
-  // 筛选项目
-  const filteredProjects = computed(() => {
-    if (currentDirection.value === 'all') {
-      return projects.value
-    }
-    return projects.value.filter(p => p.post_type === currentDirection.value)
-  })
-
   return {
     projects,
     currentDirection,
     loading,
-    filteredProjects,
     fetchProjects
   }
 })

@@ -11,7 +11,7 @@ from .conversation import (
     list_messages
 )
 from .tag import tags
-from .project import publish_project
+from .project import publish_project, list_projects
 
 __all__ = [
     'health_check',
@@ -27,4 +27,5 @@ __all__ = [
     'list_messages',
     'tags',
     'publish_project',
+    'list_projects',
 ]

@@ -4,7 +4,7 @@ from .views import (
     create_conversation, list_conversations, close_conversation,
     send_message, list_messages,
     tags,
-    publish_project
+    publish_project, list_projects
 )
 
 urlpatterns = [
@@ -27,5 +27,7 @@ urlpatterns = [
     
     # 项目发布
     path('project/publish', publish_project, name='publish_project'),
+    # 项目列表
+    path('project/list', list_projects, name='list_projects'),
 ]
 

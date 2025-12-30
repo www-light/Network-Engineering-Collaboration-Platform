@@ -205,3 +205,141 @@ def publish_project(request):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
+
+@api_view(['GET'])
+def list_projects(request):
+    """获取项目列表接口
+    
+    GET /project/list
+    查询参数（可选）:
+    - post_type: 项目类型筛选 (research/competition/personal)
+    
+    返回:
+    {
+        "code": 200,
+        "msg": "获取成功",
+        "data": [
+            {
+                "post_id": 1,
+                "post_type": "research",  # research/competition/personal
+                "title": "项目名称",
+                "publisher_name": "发布人姓名",
+                "like_num": 10,
+                "favorite_num": 5,
+                "comment_num": 3,
+                "create_time": "2024-01-01T00:00:00Z"
+            },
+            ...
+        ]
+    }
+    """
+    try:
+        # 获取筛选参数
+        post_type_filter = request.GET.get('post_type', None)
+        
+        # 类型映射：字符串 -> 整数
+        post_type_map = {
+            'research': 1,
+            'competition': 2,
+            'personal': 3
+        }
+        
+        # 构建查询
+        posts_query = PostEntity.objects.all().order_by('-create_time')
+        
+        # 如果有类型筛选，添加过滤条件
+        if post_type_filter and post_type_filter in post_type_map:
+            posts_query = posts_query.filter(post_type=post_type_map[post_type_filter])
+        
+        # 获取所有项目
+        posts = list(posts_query)
+        post_ids = [post.post_id for post in posts]
+        
+        # 按类型分组，批量查询以优化性能
+        post_ids_by_type = {1: [], 2: [], 3: []}
+        for post in posts:
+            post_ids_by_type[post.post_type].append(post.post_id)
+        
+        # 批量查询各类项目
+        research_dict = {}
+        if post_ids_by_type[1]:
+            research_list = ResearchProject.objects.filter(
+                post_id__in=post_ids_by_type[1]
+            ).select_related('teacher', 'post')
+            research_dict = {r.post_id: r for r in research_list}
+        
+        competition_dict = {}
+        if post_ids_by_type[2]:
+            competition_list = CompetitionProject.objects.filter(
+                post_id__in=post_ids_by_type[2]
+            ).select_related('teacher', 'post')
+            competition_dict = {c.post_id: c for c in competition_list}
+        
+        skill_dict = {}
+        if post_ids_by_type[3]:
+            skill_list = SkillInformation.objects.filter(
+                post_id__in=post_ids_by_type[3]
+            ).select_related('student', 'post')
+            skill_dict = {s.post_id: s for s in skill_list}
+        
+        result = []
+        
+        for post in posts:
+            # 根据项目类型获取项目信息和发布人信息
+            post_type_str = None
+            title = None
+            publisher_name = None
+            
+            if post.post_type == 1:  # 科研项目
+                research = research_dict.get(post.post_id)
+                if not research:
+                    continue
+                post_type_str = 'research'
+                title = research.research_name
+                publisher_name = research.teacher.teacher_name
+            
+            elif post.post_type == 2:  # 竞赛项目
+                competition = competition_dict.get(post.post_id)
+                if not competition:
+                    continue
+                post_type_str = 'competition'
+                title = competition.competition_name
+                publisher_name = competition.teacher.teacher_name
+            
+            elif post.post_type == 3:  # 个人技能
+                skill = skill_dict.get(post.post_id)
+                if not skill:
+                    continue
+                post_type_str = 'personal'
+                title = skill.major  # 个人技能使用专业方向作为标题
+                publisher_name = skill.student.student_name
+            
+            # 如果无法获取项目信息，跳过
+            if not title or not publisher_name:
+                continue
+            
+            result.append({
+                'post_id': post.post_id,
+                'post_type': post_type_str,
+                'title': title,
+                'teacher_name': publisher_name,  # 对于个人项目，这里实际是学生姓名
+                'like_num': post.like_num,
+                'favorite_num': post.favorite_num,
+                'comment_num': post.comment_num,
+                'create_time': post.create_time.isoformat() if post.create_time else None
+            })
+        
+        return Response(
+            {
+                'code': 200,
+                'msg': '获取成功',
+                'data': result
+            },
+            status=status.HTTP_200_OK
+        )
+    
+    except Exception as e:
+        return Response(
+            {'code': 500, 'msg': f'获取项目列表失败: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
