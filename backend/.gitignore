@@ -32,7 +32,6 @@ db.sqlite3-journal
 /staticfiles
 /uploads/*
 !/uploads/.gitkeep
-/migrations
 # Environment
 .venv
 
