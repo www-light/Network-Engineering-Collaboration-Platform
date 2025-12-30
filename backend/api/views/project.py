@@ -10,8 +10,9 @@ from rest_framework import status
 
 from ..models import PostEntity, ResearchProject, CompetitionProject, SkillInformation
 from ..models import TeacherEntity, StudentEntity, Tag, PostTag
+from ..models.interaction import Like, Favorite, Comment
 from ..serializers import ProjectPublishSerializer
-from ..utils.auth import login_required
+from ..utils.auth import login_required, get_user_from_token
 
 
 @api_view(['POST'])
@@ -341,5 +342,178 @@ def list_projects(request):
     except Exception as e:
         return Response(
             {'code': 500, 'msg': f'获取项目列表失败: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+def get_project_detail(request, post_id):
+    """获取项目详情接口
+    
+    GET /project/detail/<post_id>
+    请求头（可选）:
+    Authorization: Bearer <token>  # 如果提供，会返回当前用户的点赞、收藏状态
+    
+    返回:
+    {
+        "code": 200,
+        "msg": "获取成功",
+        "data": {
+            "post_id": 1,
+            "post_type": "research",  # research/competition/personal
+            "like_num": 10,
+            "favorite_num": 5,
+            "comment_num": 3,
+            "is_liked": false,  # 当前用户是否已点赞（需要登录）
+            "is_favorited": false,  # 当前用户是否已收藏（需要登录）
+            "create_time": "2024-01-01T00:00:00Z",
+            # 根据项目类型返回不同的字段
+            # 科研项目 (research):
+            "research_name": "项目名称",
+            "research_direction": "研究方向",
+            "tech_stack": "技术栈",
+            "recruit_quantity": 5,
+            "starttime": "2024-01-01T00:00:00Z",
+            "endtime": "2024-12-31T00:00:00Z",
+            "outcome": "预期成果",
+            "contact": "联系方式",
+            "appendix": "附件URL",
+            "teacher_name": "教师姓名",
+            "teacher_id": 1,
+            # 竞赛项目 (competition):
+            "competition_name": "竞赛名称",
+            "competition_type": "竞赛类型",
+            "deadline": "2024-12-31T00:00:00Z",
+            "team_require": "团队要求",
+            "guide_way": "指导方式",
+            "reward": "奖励",
+            # 个人技能 (personal):
+            "major": "专业",
+            "skill": "技能",
+            "skill_degree": "技能程度",
+            "project_experience": "项目经验",
+            "experience_link": "经验链接",
+            "habit_tag": "习惯标签",
+            "spend_time": "可投入时间",
+            "expect_worktype": "期望工作类型",
+            "filter": "筛选条件",
+            "certification": "证书",
+            "student_name": "学生姓名",
+            "student_id": 1
+        }
+    }
+    """
+    try:
+        # 获取项目基础信息
+        try:
+            post = PostEntity.objects.get(post_id=post_id)
+        except PostEntity.DoesNotExist:
+            return Response(
+                {'code': 404, 'msg': '项目不存在'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # 获取当前用户（如果已登录）
+        current_user = get_user_from_token(request)
+        
+        # 检查用户是否已点赞、收藏
+        is_liked = False
+        is_favorited = False
+        if current_user:
+            is_liked = Like.objects.filter(post=post, user=current_user).exists()
+            is_favorited = Favorite.objects.filter(post=post, user=current_user).exists()
+        
+        # 根据项目类型获取详细信息
+        result = {
+            'post_id': post.post_id,
+            'post_type': None,
+            'like_num': post.like_num,
+            'favorite_num': post.favorite_num,
+            'comment_num': post.comment_num,
+            'is_liked': is_liked,
+            'is_favorited': is_favorited,
+            'create_time': post.create_time.isoformat() if post.create_time else None
+        }
+        
+        if post.post_type == 1:  # 科研项目
+            try:
+                research = ResearchProject.objects.select_related('teacher', 'post').get(post_id=post_id)
+                result.update({
+                    'post_type': 'research',
+                    'research_name': research.research_name,
+                    'research_direction': research.research_direction,
+                    'tech_stack': research.tech_stack,
+                    'recruit_quantity': research.recruit_quantity,
+                    'starttime': research.starttime.isoformat() if research.starttime else None,
+                    'endtime': research.endtime.isoformat() if research.endtime else None,
+                    'outcome': research.outcome,
+                    'contact': research.contact,
+                    'appendix': research.appendix,
+                    'teacher_name': research.teacher.teacher_name,
+                    'teacher_id': research.teacher.teacher_id
+                })
+            except ResearchProject.DoesNotExist:
+                return Response(
+                    {'code': 404, 'msg': '科研项目信息不存在'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+        
+        elif post.post_type == 2:  # 竞赛项目
+            try:
+                competition = CompetitionProject.objects.select_related('teacher', 'post').get(post_id=post_id)
+                result.update({
+                    'post_type': 'competition',
+                    'competition_name': competition.competition_name,
+                    'competition_type': competition.competition_type,
+                    'deadline': competition.deadline.isoformat() if competition.deadline else None,
+                    'team_require': competition.team_require,
+                    'guide_way': competition.guide_way,
+                    'reward': competition.reward,
+                    'appendix': competition.appendix,
+                    'teacher_name': competition.teacher.teacher_name,
+                    'teacher_id': competition.teacher.teacher_id
+                })
+            except CompetitionProject.DoesNotExist:
+                return Response(
+                    {'code': 404, 'msg': '竞赛项目信息不存在'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+        
+        elif post.post_type == 3:  # 个人技能
+            try:
+                skill = SkillInformation.objects.select_related('student', 'post').get(post_id=post_id)
+                result.update({
+                    'post_type': 'personal',
+                    'major': skill.major,
+                    'skill': skill.skill,
+                    'skill_degree': skill.skill_degree,
+                    'project_experience': skill.project_experience,
+                    'experience_link': skill.experience_link,
+                    'habit_tag': skill.habit_tag,
+                    'spend_time': skill.spend_time,
+                    'expect_worktype': skill.expect_worktype,
+                    'filter': skill.filter,
+                    'certification': skill.certification,
+                    'student_name': skill.student.student_name,
+                    'student_id': skill.student.student_id
+                })
+            except SkillInformation.DoesNotExist:
+                return Response(
+                    {'code': 404, 'msg': '个人技能信息不存在'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+        
+        return Response(
+            {
+                'code': 200,
+                'msg': '获取成功',
+                'data': result
+            },
+            status=status.HTTP_200_OK
+        )
+    
+    except Exception as e:
+        return Response(
+            {'code': 500, 'msg': f'获取项目详情失败: {str(e)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
