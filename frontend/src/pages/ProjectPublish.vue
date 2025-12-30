@@ -228,6 +228,7 @@ import { useUserStore } from '@/store/user'
 import { Plus, Upload, Check, Refresh } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getTags, createTag } from '@/api/tag'
+import { publishProject } from '@/api/project'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -344,12 +345,54 @@ const handleSubmit = async () => {
     if (valid) {
       loading.value = true
       try {
-        // TODO: 调用发布项目接口
-        ElMessage.success('发布成功')
-        router.push('/projects')
+        // 构建提交数据
+        const submitData = {
+          post_type: form.post_type,
+          appendix: form.appendix || ''
+        }
+        
+        // 根据项目类型添加对应字段
+        if (form.post_type === 'research') {
+          submitData.research_name = form.research_name
+          submitData.research_direction = form.research_direction
+          submitData.tech_stack = form.tech_stack
+          submitData.recruit_quantity = form.recruit_quantity
+          submitData.starttime = form.starttime
+          submitData.endtime = form.endtime
+          submitData.outcome = form.outcome
+          submitData.contact = form.contact
+        } else if (form.post_type === 'competition') {
+          submitData.competition_name = form.competition_name
+          submitData.competition_type = form.competition_type
+          submitData.deadline = form.deadline
+          submitData.team_require = form.team_require
+          submitData.guide_way = form.guide_way
+          submitData.reward = form.reward || ''
+        } else if (form.post_type === 'personal') {
+          submitData.major = form.major
+          submitData.skill = form.skill
+          submitData.skill_degree = form.skill_degree
+          submitData.project_experience = form.project_experience || ''
+          submitData.experience_link = form.experience_link || ''
+          submitData.habit_tag = form.habit_tag || []
+          submitData.spend_time = form.spend_time
+          submitData.expect_worktype = form.expect_worktype
+          submitData.filter = form.filter
+        }
+        
+        // 调用发布项目接口
+        const response = await publishProject(submitData)
+        
+        if (response && response.post_id) {
+          ElMessage.success('发布成功')
+          router.push('/projects')
+        } else {
+          ElMessage.error('发布失败，请重试')
+        }
       } catch (error) {
-        ElMessage.error('发布失败')
-        console.error(error)
+        console.error('发布失败:', error)
+        const errorMsg = error.response?.data?.msg || error.message || '发布失败，请重试'
+        ElMessage.error(errorMsg)
       } finally {
         loading.value = false
       }

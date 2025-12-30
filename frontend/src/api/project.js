@@ -44,3 +44,12 @@ export const downloadFile = (fileUrl) => {
   })
 }
 
+// 发布项目
+export const publishProject = (data) => {
+  return request({
+    url: '/project/publish',
+    method: 'POST',
+    data
+  })
+}
+
