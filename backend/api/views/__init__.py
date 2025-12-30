@@ -2,7 +2,7 @@
 
 from .health import health_check
 from .auth import register, login
-from .post import like, favorite, comment
+from .post import like, unlike, favorite, unfavorite, comment, list_comments
 from .conversation import (
     create_conversation,
     list_conversations,
@@ -10,17 +10,26 @@ from .conversation import (
     send_message,
     list_messages
 )
+from .tag import tags
+from .project import publish_project, list_projects, get_project_detail
 
 __all__ = [
     'health_check',
     'register',
     'login',
     'like',
+    'unlike',
     'favorite',
+    'unfavorite',
     'comment',
+    'list_comments',
     'create_conversation',
     'list_conversations',
     'close_conversation',
     'send_message',
     'list_messages',
+    'tags',
+    'publish_project',
+    'list_projects',
+    'get_project_detail',
 ]
