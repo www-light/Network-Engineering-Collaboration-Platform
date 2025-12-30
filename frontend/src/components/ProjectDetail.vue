@@ -23,10 +23,13 @@
         </template>
         <div class="detail-content">
           <el-descriptions :column="2" border>
-            <el-descriptions-item label="项目名称">
+            <el-descriptions-item v-if="detail.post_type !== 'personal'" label="项目名称">
               {{ getTitle() }}
             </el-descriptions-item>
-            <el-descriptions-item label="发布人">
+            <el-descriptions-item v-if="detail.post_type !== 'personal'" label="发布人">
+              {{ getPublisherName() }}
+            </el-descriptions-item>
+            <el-descriptions-item v-if="detail.post_type === 'personal'" label="发布人">
               {{ getPublisherName() }}
             </el-descriptions-item>
             <template v-if="detail.post_type === 'research'">
@@ -63,7 +66,7 @@
             </template>
             <template v-else-if="detail.post_type === 'competition'">
               <el-descriptions-item label="竞赛类型">
-                {{ detail.competition_type }}
+                {{ getCompetitionTypeText(detail.competition_type) }}
               </el-descriptions-item>
               <el-descriptions-item label="截止时间">
                 {{ formatDate(detail.deadline) }}
@@ -72,7 +75,7 @@
                 {{ detail.team_require }}
               </el-descriptions-item>
               <el-descriptions-item label="指导方式" :span="2">
-                {{ detail.guide_way }}
+                {{ getGuideWayText(detail.guide_way) }}
               </el-descriptions-item>
               <el-descriptions-item label="奖励" :span="2">
                 {{ detail.reward }}
@@ -95,11 +98,12 @@
                 {{ detail.skill }}
               </el-descriptions-item>
               <el-descriptions-item label="技能程度">
-                {{ detail.skill_degree }}
+                {{ getSkillDegreeText(detail.skill_degree) }}
               </el-descriptions-item>
-              <el-descriptions-item label="可投入时间">
+              <el-descriptions-item label="可投入时间" :span="2">
                 {{ detail.spend_time }}
               </el-descriptions-item>
+              <!-- 项目经验独占一行，在可投入时间下面 -->
               <el-descriptions-item label="项目经验" :span="2">
                 {{ detail.project_experience }}
               </el-descriptions-item>
@@ -108,11 +112,25 @@
                   {{ detail.experience_link }}
                 </el-link>
               </el-descriptions-item>
-              <el-descriptions-item label="期望工作类型" :span="2">
-                {{ detail.expect_worktype }}
+              <el-descriptions-item label="兴趣领域" :span="2">
+                <div class="tags-container">
+                  <el-tag
+                    v-for="tag in (detail.tags || [])"
+                    :key="tag.tag_id"
+                    type="primary"
+                    size="small"
+                    style="margin-right: 8px; margin-bottom: 4px;"
+                  >
+                    {{ tag.name }}
+                  </el-tag>
+                  <span v-if="!detail.tags || detail.tags.length === 0" class="no-tags">暂无标签</span>
+                </div>
+              </el-descriptions-item>
+              <el-descriptions-item label="期望合作类型" :span="2">
+                {{ getExpectWorktypeText(detail.expect_worktype) }}
               </el-descriptions-item>
               <el-descriptions-item label="筛选条件" :span="2">
-                {{ detail.filter }}
+                {{ getFilterText(detail.filter) }}
               </el-descriptions-item>
               <el-descriptions-item v-if="detail.certification" label="证书" :span="2">
                 {{ detail.certification }}
@@ -256,7 +274,8 @@ const getTitle = () => {
   } else if (props.detail.post_type === 'competition') {
     return props.detail.competition_name
   } else if (props.detail.post_type === 'personal') {
-    return `${props.detail.major} - ${props.detail.skill}`
+    // 个人技能项目：专业 - 发布人名称
+    return `${props.detail.major} - ${getPublisherName()}`
   }
   return ''
 }
@@ -294,6 +313,49 @@ const formatTime = (timeStr) => {
   } else {
     return date.toLocaleDateString('zh-CN')
   }
+}
+
+const getSkillDegreeText = (value) => {
+  const map = {
+    'skillful': '熟练',
+    'known': '了解'
+  }
+  return map[value] || value || '未知'
+}
+
+const getExpectWorktypeText = (value) => {
+  const map = {
+    'research': '科研',
+    'competition': '大创',
+    'innovation': '竞赛'
+  }
+  return map[value] || value || '未知'
+}
+
+const getFilterText = (value) => {
+  const map = {
+    'all': '所有项目',
+    'cross': '可接受跨方向合作',
+    'local': '优先本地项目'
+  }
+  return map[value] || value || '未知'
+}
+
+const getCompetitionTypeText = (value) => {
+  const map = {
+    'IETP': '大创项目',
+    'AC': '学科竞赛',
+    'CC': '企业合作竞赛'
+  }
+  return map[value] || value || '未知'
+}
+
+const getGuideWayText = (value) => {
+  const map = {
+    'online': '线上',
+    'offline': '线下'
+  }
+  return map[value] || value || '未知'
 }
 
 const handleApply = () => {
@@ -570,5 +632,17 @@ const loadComments = async () => {
   font-size: 14px;
   line-height: 1.6;
   word-wrap: break-word;
+}
+
+.tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.no-tags {
+  color: #909399;
+  font-size: 14px;
 }
 </style>

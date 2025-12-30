@@ -77,9 +77,9 @@
           </el-form-item>
           <el-form-item label="竞赛类型" prop="competition_type">
             <el-select v-model="form.competition_type" placeholder="请选择竞赛类型" style="width: 220px;">
-              <el-option label="大创项目" value="C" />
-              <el-option label="学科竞赛" value="D" />
-              <el-option label="企业合作竞赛" value="E" />
+              <el-option label="大创项目" value="IETP" />
+              <el-option label="学科竞赛" value="AC" />
+              <el-option label="企业合作竞赛" value="CC" />
             </el-select>
           </el-form-item>
           <el-form-item label="截止时间" prop="deadline">
