@@ -22,6 +22,8 @@ class User(models.Model):
         help_text='身份: 0-学生, 1-教师, 2-管理员'
     )
     password = models.CharField(max_length=128, verbose_name='密码')
+    is_active = models.BooleanField(default=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
     token = models.CharField(max_length=64, blank=True, null=True, verbose_name='认证令牌')
     
     class Meta:

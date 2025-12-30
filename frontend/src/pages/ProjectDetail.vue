@@ -10,6 +10,22 @@
       @apply="handleApply"
       @message="handleMessage"
     />
+    <!-- 底部操作栏：点赞 / 收藏 / 评论 -->
+    <template v-if="detail">
+      <el-divider />
+      <div class="post-actions">
+        <el-button type="primary" @click="handleLike">点赞</el-button>
+        <el-button @click="handleFavorite">收藏</el-button>
+        <el-input
+          v-model="commentText"
+          type="textarea"
+          placeholder="写下你的评论..."
+          :rows="2"
+          style="max-width: 520px"
+        />
+        <el-button type="success" @click="handleSubmitComment">发表评论</el-button>
+      </div>
+    </template>
     <el-empty v-else description="项目不存在" />
   </div>
 </template>
@@ -21,6 +37,7 @@ import { getResearchDetail, getCompetitionDetail } from '@/api/project'
 import { applyAndInvite } from '@/api/cooperation'
 import { createConversation } from '@/api/conversation'
 import { useUserStore } from '@/store/user'
+import { likePost, favoritePost, commentPost } from '@/api/post'
 import ProjectDetail from '@/components/ProjectDetail.vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
@@ -30,6 +47,7 @@ const userStore = useUserStore()
 
 const detail = ref(null)
 const loading = ref(false)
+const commentText = ref('')
 
 onMounted(async () => {
   const projectId = route.params.id
@@ -96,6 +114,60 @@ const handleMessage = async () => {
     console.error(error)
   }
 }
+
+const ensureLoggedIn = () => {
+  const uid = userStore.userInfo?.user_id
+  if (!uid) {
+    ElMessage.warning('请先登录')
+    router.push('/login')
+    return null
+  }
+  return uid
+}
+
+const handleLike = async () => {
+  if (!detail.value) return
+  const uid = ensureLoggedIn()
+  if (!uid) return
+  try {
+    await likePost({ post_id: detail.value.post_id, user_id: uid })
+    ElMessage.success('已点赞')
+  } catch (error) {
+    ElMessage.error('点赞失败')
+    console.error(error)
+  }
+}
+
+const handleFavorite = async () => {
+  if (!detail.value) return
+  const uid = ensureLoggedIn()
+  if (!uid) return
+  try {
+    await favoritePost({ post_id: detail.value.post_id, user_id: uid })
+    ElMessage.success('已收藏')
+  } catch (error) {
+    ElMessage.error('收藏失败')
+    console.error(error)
+  }
+}
+
+const handleSubmitComment = async () => {
+  if (!detail.value) return
+  const uid = ensureLoggedIn()
+  if (!uid) return
+  if (!commentText.value || !commentText.value.trim()) {
+    ElMessage.warning('评论内容不能为空')
+    return
+  }
+  try {
+    await commentPost({ post_id: detail.value.post_id, user_id: uid, comment: commentText.value.trim() })
+    ElMessage.success('评论成功')
+    commentText.value = ''
+  } catch (error) {
+    ElMessage.error('评论失败')
+    console.error(error)
+  }
+}
 </script>
 
 <style scoped>
@@ -103,6 +175,13 @@ const handleMessage = async () => {
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
+}
+
+.post-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 </style>
 

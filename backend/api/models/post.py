@@ -23,7 +23,14 @@ class PostEntity(models.Model):
     like_num = models.IntegerField(default=0, verbose_name='点赞数')
     favorite_num = models.IntegerField(default=0, verbose_name='收藏数')
     comment_num = models.IntegerField(default=0, verbose_name='评论数')
-    
+    visibility = models.SmallIntegerField(
+        choices=[
+            (0, '公开'),
+            (1, '仅教师可见'),
+            (2, '仅学生可见'),
+        ],
+        default=0
+    )
     class Meta:
         db_table = 'Post_entity'
         verbose_name = '发布实体'

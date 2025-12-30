@@ -4,8 +4,8 @@ import request from './request'
 export const login = (data) => {
   return request({
     url: '/auth/login',
-    method: 'GET',
-    params: data
+    method: 'POST',
+    data
   })
 }
 

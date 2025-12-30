@@ -21,7 +21,7 @@ def register(request):
         "name": "普梓豪",
         "password": "123456",
         "extra": {
-            "grade": "2"  # 学生需要
+            "grade": 2  # 学生需要
             # 或 "title": "教授"  # 教师需要
         }
     }
@@ -33,7 +33,6 @@ def register(request):
     }
     """
     serializer = RegisterSerializer(data=request.data)
-    
     if serializer.is_valid():
         user = serializer.save()
         response_serializer = RegisterResponseSerializer({
@@ -41,7 +40,6 @@ def register(request):
             'identity': user.identity
         })
         return Response(response_serializer.data, status=status.HTTP_200_OK)
-    
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
