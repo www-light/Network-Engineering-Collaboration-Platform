@@ -3,8 +3,8 @@ from .views import (
     health_check, register, login, like, favorite, comment,
     create_conversation, list_conversations, close_conversation,
     send_message, list_messages,
-    
-    tags
+    tags,
+    publish_project
 )
 
 urlpatterns = [
@@ -24,5 +24,8 @@ urlpatterns = [
     
     # 标签
     path('tags/', tags, name='tags'),
+    
+    # 项目发布
+    path('project/publish', publish_project, name='publish_project'),
 ]
 
