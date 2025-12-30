@@ -3,6 +3,13 @@
 from .health import health_check
 from .auth import register, login
 from .post import like, favorite, comment
+from .conversation import (
+    create_conversation,
+    list_conversations,
+    close_conversation,
+    send_message,
+    list_messages
+)
 
 __all__ = [
     'health_check',
@@ -11,4 +18,9 @@ __all__ = [
     'like',
     'favorite',
     'comment',
+    'create_conversation',
+    'list_conversations',
+    'close_conversation',
+    'send_message',
+    'list_messages',
 ]

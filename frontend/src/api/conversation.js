@@ -12,7 +12,7 @@ export const createConversation = (data) => {
 // 获取会话列表
 export const getConversations = () => {
   return request({
-    url: '/conversations',
+    url: '/conversations/lists',
     method: 'GET'
   })
 }
@@ -29,7 +29,7 @@ export const sendMessage = (conversationId, data) => {
 // 获取消息列表
 export const getMessages = (conversationId, params) => {
   return request({
-    url: `/conversations/${conversationId}/messages`,
+    url: `/conversations/${conversationId}/messages/lists`,
     method: 'GET',
     params
   })

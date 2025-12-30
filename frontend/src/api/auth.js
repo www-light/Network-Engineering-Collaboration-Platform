@@ -5,7 +5,7 @@ export const login = (data) => {
   return request({
     url: '/auth/login',
     method: 'POST',
-    params: data
+    data
   })
 }
 
