@@ -31,23 +31,24 @@ service.interceptors.response.use(
   (response) => {
     const res = response.data
     
+    // 如果没有 code 字段，直接返回（可能是其他格式的响应）
+    if (res.code === undefined) {
+      return res
+    }
+    
     // 如果返回的code是201（创建成功），返回完整响应以便前端处理
     if (res.code === 201) {
       return res
     }
     
     // 如果返回的code不是200，则视为错误
-    if (res.code !== undefined && res.code !== 200) {
+    if (res.code !== 200) {
       ElMessage.error(res.msg || '请求失败')
       return Promise.reject(new Error(res.msg || '请求失败'))
     }
     
-    // 如果有code且为200，返回data字段
-    if (res.code === 200 && res.data !== undefined) {
-      return res.data
-    }
-    
-    // 如果直接返回数据（没有code字段），直接返回
+    // code === 200 时，返回完整响应对象，让前端自己决定如何使用
+    // 这样前端可以访问 code, msg, data 等字段
     return res
   },
   (error) => {

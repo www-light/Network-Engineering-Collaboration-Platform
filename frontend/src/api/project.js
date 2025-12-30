@@ -9,20 +9,22 @@ export const getProjects = (params) => {
   })
 }
 
-// 获取科研项目详情
-export const getResearchDetail = (postId) => {
+// 获取项目详情（统一接口）
+export const getProjectDetail = (postId) => {
   return request({
-    url: `/posts/${postId}/detail/research`,
+    url: `/project/detail/${postId}`,
     method: 'GET'
   })
 }
 
-// 获取大创/竞赛详情
+// 获取科研项目详情（保留兼容性）
+export const getResearchDetail = (postId) => {
+  return getProjectDetail(postId)
+}
+
+// 获取大创/竞赛详情（保留兼容性）
 export const getCompetitionDetail = (postId) => {
-  return request({
-    url: `/posts/${postId}/competition`,
-    method: 'GET'
-  })
+  return getProjectDetail(postId)
 }
 
 // 获取项目点赞收藏评论数

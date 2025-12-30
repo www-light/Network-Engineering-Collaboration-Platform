@@ -60,6 +60,7 @@
           :loading="detailLoading"
           @apply="handleApply"
           @message="handleMessage"
+          @update:detail="handleDetailUpdate"
         />
       </el-main>
     </el-container>
@@ -70,7 +71,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProjectStore } from '@/store/project'
-import { getResearchDetail, getCompetitionDetail } from '@/api/project'
+import { getProjectDetail } from '@/api/project'
 import { applyAndInvite } from '@/api/cooperation'
 import { createConversation } from '@/api/conversation'
 import { useUserStore } from '@/store/user'
@@ -123,12 +124,11 @@ const handleProjectClick = async (project) => {
   detailLoading.value = true
   
   try {
-    if (project.post_type === 'research') {
-      const detail = await getResearchDetail(project.post_id)
-      currentDetail.value = { ...detail, post_type: 'research' }
-    } else if (project.post_type === 'competition') {
-      const detail = await getCompetitionDetail(project.post_id)
-      currentDetail.value = { ...detail, post_type: 'competition' }
+    const response = await getProjectDetail(project.post_id)
+    if (response.code === 200) {
+      currentDetail.value = response.data
+    } else {
+      ElMessage.error(response.msg || '获取项目详情失败')
     }
   } catch (error) {
     ElMessage.error('获取项目详情失败')
@@ -188,6 +188,20 @@ const handleSizeChange = (size) => {
 
 const handlePageChange = (page) => {
   currentPage.value = page
+}
+
+const handleDetailUpdate = (updatedDetail) => {
+  currentDetail.value = updatedDetail
+  // 更新列表中的项目信息
+  const projectIndex = projectStore.projects.findIndex(p => p.post_id === updatedDetail.post_id)
+  if (projectIndex !== -1) {
+    projectStore.projects[projectIndex] = {
+      ...projectStore.projects[projectIndex],
+      like_num: updatedDetail.like_num,
+      favorite_num: updatedDetail.favorite_num,
+      comment_num: updatedDetail.comment_num
+    }
+  }
 }
 </script>
 

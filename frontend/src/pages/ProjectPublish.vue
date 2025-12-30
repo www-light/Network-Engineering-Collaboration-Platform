@@ -96,8 +96,8 @@
           </el-form-item>
           <el-form-item label="指导方式" prop="guide_way">
             <el-select v-model="form.guide_way" placeholder="请选择指导方式" style="width: 220px;">
-              <el-option label="线上" value="C" />
-              <el-option label="线下" value="D" />
+              <el-option label="线上" value="online" />
+              <el-option label="线下" value="offline" />
             </el-select>
           </el-form-item>
           <el-form-item label="奖励" prop="reward">
@@ -120,8 +120,8 @@
           </el-form-item>
           <el-form-item label="掌握程度" prop="skill_degree">
             <el-select v-model="form.skill_degree" placeholder="请选择技术掌握程度" style="width: 220px;">
-              <el-option label="了解" value="C" />
-              <el-option label="熟练" value="D" />
+              <el-option label="了解" value="known" />
+              <el-option label="熟练" value="skillful" />
             </el-select>
           </el-form-item>
           <el-form-item label="项目经历" prop="project_experience">
@@ -168,16 +168,16 @@
           </el-form-item>
           <el-form-item label="期待合作类型" prop="expect_worktype">
             <el-select v-model="form.expect_worktype" placeholder="请选择期待合作类型" style="width: 220px;">
-              <el-option label="科研" value="C" />
-              <el-option label="大创" value="D" />
-              <el-option label="竞赛" value="E" />
+              <el-option label="科研" value="research" />
+              <el-option label="大创" value="competition" />
+              <el-option label="竞赛" value="innovation" />
             </el-select>
           </el-form-item>
           <el-form-item label="合作意愿声名" prop="filter">
             <el-select v-model="form.filter" placeholder="请输入项目筛选条件" style="width: 220px;">
-              <el-option label="所有项目" value="C" />
-              <el-option label="可接受跨方向合作" value="D" />
-              <el-option label="优先本地项目" value="E" />
+              <el-option label="所有项目" value="all" />
+              <el-option label="可接受跨方向合作" value="cross" />
+              <el-option label="优先本地项目" value="local" />
             </el-select>
           </el-form-item>
         </template>
@@ -383,11 +383,16 @@ const handleSubmit = async () => {
         // 调用发布项目接口
         const response = await publishProject(submitData)
         
-        if (response && response.post_id) {
-          ElMessage.success('发布成功')
-          router.push('/projects')
+        // 处理响应：检查 code 和 data.post_id
+        if (response && response.code === 200) {
+          if (response.data && response.data.post_id) {
+            ElMessage.success(response.msg || '发布成功')
+            router.push('/projects')
+          } else {
+            ElMessage.error('发布失败：未返回项目ID')
+          }
         } else {
-          ElMessage.error('发布失败，请重试')
+          ElMessage.error(response?.msg || '发布失败，请重试')
         }
       } catch (error) {
         console.error('发布失败:', error)

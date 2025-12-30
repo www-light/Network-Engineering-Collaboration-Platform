@@ -13,8 +13,16 @@ export const useProjectStore = defineStore('project', () => {
     try {
       // 构建查询参数，如果指定了方向则传递给后端
       const params = direction && direction !== 'all' ? { post_type: direction } : {}
-      const data = await getProjects(params)
-      projects.value = data || []
+      const response = await getProjects(params)
+      // 处理响应：如果有 code 字段，提取 data；否则直接使用
+      if (response && response.code === 200 && response.data !== undefined) {
+        projects.value = response.data || []
+      } else if (Array.isArray(response)) {
+        // 兼容旧格式（直接返回数组）
+        projects.value = response
+      } else {
+        projects.value = []
+      }
       if (direction) {
         currentDirection.value = direction
       }
