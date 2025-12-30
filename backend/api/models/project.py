@@ -57,7 +57,6 @@ class CompetitionProject(models.Model):
         db_column='teacher_id',
         verbose_name='教师ID'
     )
-    competition_type = models.CharField(max_length=255, verbose_name='竞赛类型')
     competition_type = models.SmallIntegerField(
         choices=[
             (0, 'IETP'),
@@ -128,7 +127,7 @@ class SkillInformation(models.Model):
             (2, 'innovation'),
         ],
         default=0,
-        verbose_name='期望工作类型'
+        verbose_name='期望合作类型'
     )
     filter = models.SmallIntegerField(
         choices=[

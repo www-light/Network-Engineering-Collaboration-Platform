@@ -125,6 +125,43 @@ def publish_project(request):
                         status=status.HTTP_404_NOT_FOUND
                     )
                 
+                # 处理 competition_type：将前端字符串转换为后端整数
+                # 映射关系：IETP -> 0, AC -> 1, CC -> 2
+                competition_type_str = validated_data.get('competition_type', '')
+                competition_type_map = {
+                    'IETP': 0,
+                    'AC': 1,
+                    'CC': 2
+                }
+                competition_type_int = competition_type_map.get(competition_type_str)
+                if competition_type_int is None:
+                    # 如果已经是整数，直接使用；否则报错
+                    try:
+                        competition_type_int = int(competition_type_str)
+                    except (ValueError, TypeError):
+                        return Response(
+                            {'code': 400, 'msg': f'competition_type 值无效: {competition_type_str}，应为 IETP、AC 或 CC'},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+                
+                # 处理 guide_way：将前端字符串转换为后端整数
+                # 映射关系：online -> 0, offline -> 1
+                guide_way_str = validated_data.get('guide_way', '')
+                guide_way_map = {
+                    'online': 0,
+                    'offline': 1
+                }
+                guide_way_int = guide_way_map.get(guide_way_str)
+                if guide_way_int is None:
+                    # 如果已经是整数，直接使用；否则报错
+                    try:
+                        guide_way_int = int(guide_way_str)
+                    except (ValueError, TypeError):
+                        return Response(
+                            {'code': 400, 'msg': f'guide_way 值无效: {guide_way_str}，应为 online 或 offline'},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+                
                 # 解析日期时间（转换为 timezone-aware datetime）
                 deadline = timezone.make_aware(
                     datetime.strptime(validated_data['deadline'], '%Y-%m-%d')
@@ -133,11 +170,11 @@ def publish_project(request):
                 CompetitionProject.objects.create(
                     post=post,
                     teacher=teacher,
-                    competition_type=validated_data['competition_type'],
+                    competition_type=competition_type_int,
                     competition_name=validated_data['competition_name'],
                     deadline=deadline,
                     team_require=validated_data['team_require'],
-                    guide_way=validated_data['guide_way'],
+                    guide_way=guide_way_int,
                     reward=validated_data.get('reward', '') or None,
                     appendix=validated_data.get('appendix', '') or None
                 )
@@ -162,18 +199,74 @@ def publish_project(request):
                 habit_tag_ids = validated_data.get('habit_tag', [])
                 habit_tag_str = ','.join(map(str, habit_tag_ids)) if habit_tag_ids else ''
                 
+                # 处理 skill_degree：将前端字符串转换为后端整数
+                # 映射关系：skillful -> 0, known -> 1
+                skill_degree_str = validated_data.get('skill_degree', '')
+                skill_degree_map = {
+                    'skillful': 0,
+                    'known': 1
+                }
+                skill_degree_int = skill_degree_map.get(skill_degree_str)
+                if skill_degree_int is None:
+                    # 如果已经是整数，直接使用；否则报错
+                    try:
+                        skill_degree_int = int(skill_degree_str)
+                    except (ValueError, TypeError):
+                        return Response(
+                            {'code': 400, 'msg': f'skill_degree 值无效: {skill_degree_str}，应为 skillful 或 known'},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+                
+                # 处理 expect_worktype：将前端字符串转换为后端整数
+                # 映射关系：research -> 0, competition -> 1, innovation -> 2
+                expect_worktype_str = validated_data.get('expect_worktype', '')
+                expect_worktype_map = {
+                    'research': 0,
+                    'competition': 1,
+                    'innovation': 2
+                }
+                expect_worktype_int = expect_worktype_map.get(expect_worktype_str)
+                if expect_worktype_int is None:
+                    # 如果已经是整数，直接使用；否则报错
+                    try:
+                        expect_worktype_int = int(expect_worktype_str)
+                    except (ValueError, TypeError):
+                        return Response(
+                            {'code': 400, 'msg': f'expect_worktype 值无效: {expect_worktype_str}，应为 research、competition 或 innovation'},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+                
+                # 处理 filter：将前端字符串转换为后端整数
+                # 映射关系：all -> 0, cross -> 1, local -> 2
+                filter_str = validated_data.get('filter', '')
+                filter_map = {
+                    'all': 0,
+                    'cross': 1,
+                    'local': 2
+                }
+                filter_int = filter_map.get(filter_str)
+                if filter_int is None:
+                    # 如果已经是整数，直接使用；否则报错
+                    try:
+                        filter_int = int(filter_str)
+                    except (ValueError, TypeError):
+                        return Response(
+                            {'code': 400, 'msg': f'filter 值无效: {filter_str}，应为 all、cross 或 local'},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+                
                 SkillInformation.objects.create(
                     post=post,
                     student=student,
                     major=validated_data['major'],
                     skill=validated_data['skill'],
-                    skill_degree=validated_data['skill_degree'],
+                    skill_degree=skill_degree_int,
                     project_experience=validated_data.get('project_experience', ''),
                     experience_link=validated_data.get('experience_link', '') or None,
                     habit_tag=habit_tag_str,
                     spend_time=validated_data['spend_time'],
-                    expect_worktype=validated_data['expect_worktype'],
-                    filter=validated_data['filter'],
+                    expect_worktype=expect_worktype_int,
+                    filter=filter_int,
                     certification=validated_data.get('appendix', '') or None
                 )
                 
@@ -461,13 +554,22 @@ def get_project_detail(request, post_id):
         elif post.post_type == 2:  # 竞赛项目
             try:
                 competition = CompetitionProject.objects.select_related('teacher', 'post').get(post_id=post_id)
+                
+                # 将 competition_type 整数转换为字符串
+                competition_type_map = {0: 'IETP', 1: 'AC', 2: 'CC'}
+                competition_type_str = competition_type_map.get(competition.competition_type, 'unknown')
+                
+                # 将 guide_way 整数转换为字符串
+                guide_way_map = {0: 'online', 1: 'offline'}
+                guide_way_str = guide_way_map.get(competition.guide_way, 'unknown')
+                
                 result.update({
                     'post_type': 'competition',
                     'competition_name': competition.competition_name,
-                    'competition_type': competition.competition_type,
+                    'competition_type': competition_type_str,
                     'deadline': competition.deadline.isoformat() if competition.deadline else None,
                     'team_require': competition.team_require,
-                    'guide_way': competition.guide_way,
+                    'guide_way': guide_way_str,
                     'reward': competition.reward,
                     'appendix': competition.appendix,
                     'teacher_name': competition.teacher.teacher_name,
@@ -482,20 +584,41 @@ def get_project_detail(request, post_id):
         elif post.post_type == 3:  # 个人技能
             try:
                 skill = SkillInformation.objects.select_related('student', 'post').get(post_id=post_id)
+                
+                # 将 skill_degree 整数转换为字符串
+                skill_degree_map = {0: 'skillful', 1: 'known'}
+                skill_degree_str = skill_degree_map.get(skill.skill_degree, 'unknown')
+                
+                # 将 expect_worktype 整数转换为字符串
+                expect_worktype_map = {0: 'research', 1: 'competition', 2: 'innovation'}
+                expect_worktype_str = expect_worktype_map.get(skill.expect_worktype, 'unknown')
+                
+                # 将 filter 整数转换为字符串
+                filter_map = {0: 'all', 1: 'cross', 2: 'local'}
+                filter_str = filter_map.get(skill.filter, 'unknown')
+                
+                # 获取该项目的标签
+                post_tags = PostTag.objects.filter(post=post).select_related('tag')
+                tags_list = [
+                    {'tag_id': pt.tag.tag_id, 'name': pt.tag.name}
+                    for pt in post_tags
+                ]
+                
                 result.update({
                     'post_type': 'personal',
                     'major': skill.major,
                     'skill': skill.skill,
-                    'skill_degree': skill.skill_degree,
+                    'skill_degree': skill_degree_str,
                     'project_experience': skill.project_experience,
                     'experience_link': skill.experience_link,
                     'habit_tag': skill.habit_tag,
                     'spend_time': skill.spend_time,
-                    'expect_worktype': skill.expect_worktype,
-                    'filter': skill.filter,
+                    'expect_worktype': expect_worktype_str,
+                    'filter': filter_str,
                     'certification': skill.certification,
                     'student_name': skill.student.student_name,
-                    'student_id': skill.student.student_id
+                    'student_id': skill.student.student_id,
+                    'tags': tags_list  # 添加标签列表
                 })
             except SkillInformation.DoesNotExist:
                 return Response(
