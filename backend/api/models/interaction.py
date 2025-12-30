@@ -65,7 +65,10 @@ class Comment(models.Model):
     """评论表
     
     允许同一用户对同一帖子发表多条评论
+    允许同一用户对同一帖子发表多条评论
     """
+    # 使用id作为主键（Django默认），comment_id作为唯一标识字段
+    # 如果数据库已有id字段，这样可以避免迁移冲突
     # 使用id作为主键（Django默认），comment_id作为唯一标识字段
     # 如果数据库已有id字段，这样可以避免迁移冲突
     post = models.ForeignKey(
@@ -87,6 +90,7 @@ class Comment(models.Model):
         db_table = 'Comment'
         verbose_name = '评论'
         verbose_name_plural = '评论'
+        # 移除 unique_together 约束，允许多条评论
         # 移除 unique_together 约束，允许多条评论
         ordering = ['-created_at']
     
