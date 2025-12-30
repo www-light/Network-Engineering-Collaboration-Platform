@@ -16,6 +16,8 @@
           <el-icon><User /></el-icon>
           <span>{{ project.teacher_name }}</span>
         </div>
+      </div>
+      <div class="card-footer">
         <div class="stats">
           <span class="stat-item">
             <el-icon><Star /></el-icon>
@@ -30,8 +32,6 @@
             {{ project.comment_num }}
           </span>
         </div>
-      </div>
-      <div class="card-footer">
         <span class="time">{{ formatTime(project.create_time) }}</span>
       </div>
     </div>
@@ -67,7 +67,7 @@ const getTypeName = (type) => {
   const map = {
     research: '科研项目',
     competition: '大创/竞赛',
-    personal: '个人项目'
+    personal: '个人技能'
   }
   return map[type] || type
 }
@@ -80,7 +80,7 @@ const formatTime = (time) => {
 
 <style scoped>
 .project-card {
-  margin-bottom: 12px;
+  margin-bottom: 16px;
   cursor: pointer;
   transition: all 0.3s;
   border-radius: 8px;
@@ -128,6 +128,13 @@ const formatTime = (time) => {
   color: #606266;
   font-size: 14px;
   margin-bottom: 8px;
+  margin-left: 16px;
+}
+
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .stats {
@@ -141,11 +148,6 @@ const formatTime = (time) => {
   gap: 4px;
   color: #909399;
   font-size: 12px;
-}
-
-.card-footer {
-  display: flex;
-  justify-content: flex-end;
 }
 
 .time {

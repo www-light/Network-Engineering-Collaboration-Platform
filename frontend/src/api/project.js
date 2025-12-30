@@ -3,26 +3,28 @@ import request from './request'
 // 获取项目列表
 export const getProjects = (params) => {
   return request({
-    url: '/projects',
+    url: '/project/list',
     method: 'GET',
     params
   })
 }
 
-// 获取科研项目详情
-export const getResearchDetail = (postId) => {
+// 获取项目详情（统一接口）
+export const getProjectDetail = (postId) => {
   return request({
-    url: `/posts/${postId}/detail/research`,
+    url: `/project/detail/${postId}`,
     method: 'GET'
   })
 }
 
-// 获取大创/竞赛详情
+// 获取科研项目详情（保留兼容性）
+export const getResearchDetail = (postId) => {
+  return getProjectDetail(postId)
+}
+
+// 获取大创/竞赛详情（保留兼容性）
 export const getCompetitionDetail = (postId) => {
-  return request({
-    url: `/posts/${postId}/competition`,
-    method: 'GET'
-  })
+  return getProjectDetail(postId)
 }
 
 // 获取项目点赞收藏评论数
@@ -41,6 +43,15 @@ export const downloadFile = (fileUrl) => {
     method: 'GET',
     params: { file_url: fileUrl },
     responseType: 'blob'
+  })
+}
+
+// 发布项目
+export const publishProject = (data) => {
+  return request({
+    url: '/project/publish',
+    method: 'POST',
+    data
   })
 }
 

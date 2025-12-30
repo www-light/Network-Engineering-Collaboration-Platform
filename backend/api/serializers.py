@@ -63,7 +63,7 @@ class RegisterSerializer(serializers.Serializer):
                 raise serializers.ValidationError({"account": "该教工号已被注册"})
         
         # 创建 User
-        user = User(identity=identity)
+        user = User(identity=identity, token='')  # 注册时token为空，登录时生成
         user.set_password(password)
         user.save()
         
@@ -148,3 +148,76 @@ class LoginResponseSerializer(serializers.Serializer):
     identity = serializers.IntegerField()
     token = serializers.CharField()
 
+
+class ProjectPublishSerializer(serializers.Serializer):
+    """项目发布序列化器"""
+    post_type = serializers.CharField(help_text='项目类型: research-科研项目, competition-竞赛项目, personal-个人技能')
+    
+    # 科研项目字段
+    research_name = serializers.CharField(required=False, allow_blank=True)
+    research_direction = serializers.CharField(required=False, allow_blank=True)
+    tech_stack = serializers.CharField(required=False, allow_blank=True)
+    recruit_quantity = serializers.IntegerField(required=False)
+    starttime = serializers.CharField(required=False, allow_blank=True)
+    endtime = serializers.CharField(required=False, allow_blank=True)
+    outcome = serializers.CharField(required=False, allow_blank=True)
+    contact = serializers.CharField(required=False, allow_blank=True)
+    
+    # 竞赛项目字段
+    competition_name = serializers.CharField(required=False, allow_blank=True)
+    competition_type = serializers.CharField(required=False, allow_blank=True)
+    deadline = serializers.CharField(required=False, allow_blank=True)
+    team_require = serializers.CharField(required=False, allow_blank=True)
+    guide_way = serializers.CharField(required=False, allow_blank=True)
+    reward = serializers.CharField(required=False, allow_blank=True)
+    
+    # 个人技能字段
+    major = serializers.CharField(required=False, allow_blank=True)
+    skill = serializers.CharField(required=False, allow_blank=True)
+    skill_degree = serializers.CharField(required=False, allow_blank=True)
+    project_experience = serializers.CharField(required=False, allow_blank=True)
+    experience_link = serializers.CharField(required=False, allow_blank=True)
+    habit_tag = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        allow_empty=True
+    )
+    spend_time = serializers.CharField(required=False, allow_blank=True)
+    expect_worktype = serializers.CharField(required=False, allow_blank=True)
+    filter = serializers.CharField(required=False, allow_blank=True)
+    
+    # 通用字段
+    appendix = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    
+    def validate_post_type(self, value):
+        """验证项目类型"""
+        if value not in ['research', 'competition', 'personal']:
+            raise serializers.ValidationError("post_type 必须是 research、competition 或 personal")
+        return value
+    
+    def validate(self, attrs):
+        """根据项目类型验证必填字段"""
+        post_type = attrs.get('post_type')
+        
+        if post_type == 'research':
+            required_fields = ['research_name', 'research_direction', 'tech_stack', 
+                             'recruit_quantity', 'starttime', 'endtime', 'outcome', 'contact']
+            for field in required_fields:
+                if not attrs.get(field):
+                    raise serializers.ValidationError({field: f"{field} 是必填字段"})
+        
+        elif post_type == 'competition':
+            required_fields = ['competition_name', 'competition_type', 'deadline', 
+                             'team_require', 'guide_way']
+            for field in required_fields:
+                if not attrs.get(field):
+                    raise serializers.ValidationError({field: f"{field} 是必填字段"})
+        
+        elif post_type == 'personal':
+            required_fields = ['major', 'skill', 'skill_degree', 'spend_time', 
+                             'expect_worktype', 'filter']
+            for field in required_fields:
+                if not attrs.get(field):
+                    raise serializers.ValidationError({field: f"{field} 是必填字段"})
+        
+        return attrs

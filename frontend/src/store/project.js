@@ -11,31 +11,33 @@ export const useProjectStore = defineStore('project', () => {
   const fetchProjects = async (direction) => {
     loading.value = true
     try {
-      const data = await getProjects()
-      projects.value = data
+      // 构建查询参数，如果指定了方向则传递给后端
+      const params = direction && direction !== 'all' ? { post_type: direction } : {}
+      const response = await getProjects(params)
+      // 处理响应：如果有 code 字段，提取 data；否则直接使用
+      if (response && response.code === 200 && response.data !== undefined) {
+        projects.value = response.data || []
+      } else if (Array.isArray(response)) {
+        // 兼容旧格式（直接返回数组）
+        projects.value = response
+      } else {
+        projects.value = []
+      }
       if (direction) {
         currentDirection.value = direction
       }
     } catch (error) {
       console.error('获取项目列表失败:', error)
+      projects.value = []
     } finally {
       loading.value = false
     }
   }
 
-  // 筛选项目
-  const filteredProjects = computed(() => {
-    if (currentDirection.value === 'all') {
-      return projects.value
-    }
-    return projects.value.filter(p => p.post_type === currentDirection.value)
-  })
-
   return {
     projects,
     currentDirection,
     loading,
-    filteredProjects,
     fetchProjects
   }
 })
