@@ -64,10 +64,10 @@ class Favorite(models.Model):
 class Comment(models.Model):
     """评论表
     
-    注意：原 SQL 中使用 (post_id, user_id) 作为主键，意味着每个用户对每个帖子只能有一条评论。
-    Django 不支持复合主键，这里使用 unique_together 来保持唯一性约束。
-    如果需要允许多条评论，建议后续添加 comment_id 作为主键。
+    允许同一用户对同一帖子发表多条评论
     """
+    # 使用id作为主键（Django默认），comment_id作为唯一标识字段
+    # 如果数据库已有id字段，这样可以避免迁移冲突
     post = models.ForeignKey(
         PostEntity,
         on_delete=models.CASCADE,
@@ -87,10 +87,8 @@ class Comment(models.Model):
         db_table = 'Comment'
         verbose_name = '评论'
         verbose_name_plural = '评论'
-        # 原 SQL 中使用 (post_id, user_id) 作为主键，这里用 unique_together 模拟
-        unique_together = [['post', 'user']]
+        # 移除 unique_together 约束，允许多条评论
         ordering = ['-created_at']
     
     def __str__(self):
-        return f'Comment: User {self.user.user_id} on Post {self.post.post_id}'
-
+        return f'Comment {self.id}: User {self.user.user_id} on Post {self.post.post_id}'
