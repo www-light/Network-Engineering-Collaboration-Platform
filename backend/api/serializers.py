@@ -63,7 +63,7 @@ class RegisterSerializer(serializers.Serializer):
                 raise serializers.ValidationError({"account": "该教工号已被注册"})
         
         # 创建 User
-        user = User(identity=identity)
+        user = User(identity=identity, token='')  # 注册时token为空，登录时生成
         user.set_password(password)
         user.save()
         

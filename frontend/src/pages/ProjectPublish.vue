@@ -18,10 +18,10 @@
       >
         <el-form-item label="项目类型" prop="post_type">
           <el-radio-group v-model="form.post_type" @change="handleTypeChange">
-            <el-radio label="research">科研项目</el-radio>
-            <el-radio label="competition">大创/竞赛</el-radio>
-            <!-- <el-radio v-if="userStore.isStudent" label="personal">个人项目</el-radio> -->
-            <el-radio label="personal">个人项目</el-radio>
+            <el-radio v-if="userStore.isTeacher" label="research">科研项目</el-radio>
+            <el-radio v-if="userStore.isTeacher" label="competition">大创/竞赛</el-radio>
+            <el-radio v-if="userStore.isStudent" label="personal">个人技能</el-radio>
+            <!-- <el-radio label="personal">个人项目</el-radio> -->
           </el-radio-group>
         </el-form-item>
 
@@ -239,7 +239,7 @@ const tagsList = ref([])
 const tagsLoading = ref(false)
 
 const form = reactive({
-  post_type: 'research',
+  post_type: userStore.isStudent ? 'personal' : 'research',
   research_name: '',
   research_direction: '',
   tech_stack: '',
@@ -430,6 +430,12 @@ const handleCreateTag = async () => {
 }
 
 onMounted(() => {
+  // 根据用户身份设置默认项目类型
+  if (userStore.isStudent && form.post_type !== 'personal') {
+    form.post_type = 'personal'
+  } else if (userStore.isTeacher && form.post_type === 'personal') {
+    form.post_type = 'research'
+  }
   loadTags()
 })
 
