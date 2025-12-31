@@ -2,7 +2,8 @@ from django.urls import path
 from .views import (
     health_check, register, login, like, favorite, comment,
     create_conversation, list_conversations, close_conversation,
-    send_message, list_messages
+    send_message, list_messages,
+    upload_attachment, download_attachment
 )
 
 urlpatterns = [
@@ -12,6 +13,10 @@ urlpatterns = [
     path('post/like', like, name='post_like'),
     path('post/favorite', favorite, name='post_favorite'),
     path('post/comment', comment, name='post_comment'),
+
+    # 附件上传与下载（新的下载路径并保留旧路径兼容）
+    path('attachments/upload', upload_attachment, name='upload_attachment'),
+    path('attachments/<uuid:file_id>/download', download_attachment, name='download_attachment'),
     
     # 站内私信
     path('conversations', create_conversation, name='create_conversation'),
