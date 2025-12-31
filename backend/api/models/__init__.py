@@ -11,6 +11,7 @@ from .message import Conversation, Message
 from .cooperation import TeacherStudentCooperation
 from .skill import Skill, StudentSkill
 from .direction import TechStack, Direction, ResearchDirection, PostDirection
+from .attachment import PostAttachment
 
 __all__ = [
     'User',
@@ -34,5 +35,6 @@ __all__ = [
     'Direction',
     'ResearchDirection',
     'PostDirection',
+    'PostAttachment',
 ]
 

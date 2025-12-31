@@ -30,7 +30,6 @@ class ResearchProject(models.Model):
     endtime = models.DateTimeField(verbose_name='结束时间')
     outcome = models.CharField(max_length=255, verbose_name='预期成果')
     contact = models.CharField(max_length=255, verbose_name='联系方式')
-    appendix = models.CharField(max_length=255, blank=True, null=True, verbose_name='附件')
     
     class Meta:
         db_table = 'Research_project'
@@ -63,7 +62,6 @@ class CompetitionProject(models.Model):
     team_require = models.CharField(max_length=255, verbose_name='团队要求')
     guide_way = models.CharField(max_length=255, verbose_name='指导方式')
     reward = models.CharField(max_length=255, blank=True, null=True, verbose_name='奖励')
-    appendix = models.CharField(max_length=255, blank=True, null=True, verbose_name='附件')
     
     class Meta:
         db_table = 'Competition_project'
@@ -99,7 +97,6 @@ class SkillInformation(models.Model):
     spend_time = models.CharField(max_length=255, verbose_name='可投入时间')
     expect_worktype = models.CharField(max_length=255, verbose_name='期望工作类型')
     filter = models.CharField(max_length=255, verbose_name='筛选条件')
-    certification = models.CharField(max_length=255, blank=True, null=True, verbose_name='证书')
     
     class Meta:
         db_table = 'Skill_information'
