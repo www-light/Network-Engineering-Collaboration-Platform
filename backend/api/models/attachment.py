@@ -44,10 +44,6 @@ class PostAttachment(models.Model):
         verbose_name = '发布附件'
         verbose_name_plural = '发布附件'
         ordering = ['-created_at']
-        indexes = [
-            models.Index(fields=['post_id']),
-            models.Index(fields=['created_at']),
-        ]
     
     def __str__(self):
         return f'{self.original_filename} (Post {self.post})'

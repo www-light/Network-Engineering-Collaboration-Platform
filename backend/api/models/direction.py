@@ -1,6 +1,6 @@
 """
 方向和技术栈相关模型
-包括：TechStack, Direction, ResearchDirection, PostDirection
+包括：TechStack, Direction, PostStack, PostDirection
 """
 from django.db import models
 from .post import PostEntity
