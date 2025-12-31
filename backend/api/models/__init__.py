@@ -9,6 +9,8 @@ from .project import ResearchProject, CompetitionProject, SkillInformation
 from .interaction import Like, Favorite, Comment
 from .message import Conversation, Message
 from .cooperation import TeacherStudentCooperation
+from .skill import Skill, StudentSkill
+from .direction import TechStack, Direction, ResearchDirection, PostDirection
 
 __all__ = [
     'User',
@@ -26,5 +28,11 @@ __all__ = [
     'Conversation',
     'Message',
     'TeacherStudentCooperation',
+    'Skill',
+    'StudentSkill',
+    'TechStack',
+    'Direction',
+    'ResearchDirection',
+    'PostDirection',
 ]
 
