@@ -3,7 +3,6 @@
 包括：Skill, StudentSkill
 """
 from django.db import models
-from .user import StudentEntity
 from .post import PostEntity
 
 class Skill(models.Model):
