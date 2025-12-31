@@ -51,4 +51,4 @@ class PostAttachment(models.Model):
         ]
     
     def __str__(self):
-        return f'{self.original_filename} (Post {self.post_id})'
+        return f'{self.original_filename} (Post {self.post})'
