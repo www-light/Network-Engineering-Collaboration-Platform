@@ -115,14 +115,43 @@
           <el-form-item label="专业方向" prop="major">
             <el-input v-model="form.major" placeholder="请输入专业方向" />
           </el-form-item>
-          <el-form-item label="掌握技术" prop="skill">
-            <el-input v-model="form.skill" placeholder="请输入掌握技术" />
-          </el-form-item>
-          <el-form-item label="掌握程度" prop="skill_degree">
-            <el-select v-model="form.skill_degree" placeholder="请选择技术掌握程度" style="width: 220px;">
-              <el-option label="了解" value="known" />
-              <el-option label="熟练" value="skillful" />
-            </el-select>
+          <el-form-item label="掌握技能" prop="skills">
+            <div class="skills-container">
+              <div
+                v-for="(skill, index) in form.skills"
+                :key="index"
+                class="skill-item"
+              >
+                <el-input
+                  v-model="skill.skill_name"
+                  placeholder="请输入技能名称"
+                  style="flex: 1; margin-right: 10px;"
+                  @blur="validateSkillName(index)"
+                />
+                <el-select
+                  v-model="skill.skill_degree"
+                  placeholder="掌握程度"
+                  style="width: 150px; margin-right: 10px;"
+                >
+                  <el-option label="了解" value="known" />
+                  <el-option label="熟练" value="skillful" />
+                </el-select>
+                <el-button
+                  type="danger"
+                  :icon="Delete"
+                  circle
+                  @click="removeSkill(index)"
+                />
+              </div>
+              <el-button
+                type="primary"
+                :icon="Plus"
+                @click="addSkill"
+                style="width: 100%; margin-top: 10px;"
+              >
+                添加技能
+              </el-button>
+            </div>
           </el-form-item>
           <el-form-item label="项目经历" prop="project_experience">
             <el-input
@@ -225,7 +254,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/store/user'
-import { Plus, Upload, Check, Refresh } from '@element-plus/icons-vue'
+import { Plus, Upload, Check, Refresh, Delete } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getTags, createTag } from '@/api/tag'
 import { publishResearch, publishCompetition, publishPersonal } from '@/api/project'
@@ -258,8 +287,7 @@ const form = reactive({
   appendix: '',
 
   major: '',
-  skill: '',
-  skill_degree: '',
+  skills: [],
   project_experience: '',
   experience_link: '',
   habit_tag: [],
@@ -285,8 +313,30 @@ const rules = {
   guide_way: [{ required: true, message: '请输入指导方式', trigger: 'blur' }],
 
   major: [{ required: true, message: '请输入专业方向', trigger: 'blur' }],
-  skill: [{ required: true, message: '请输入掌握技术', trigger: 'blur' }],
-  skill_degree: [{ required: true, message: '请选择技术掌握程度', trigger: 'blur' }],
+  skills: [
+    { 
+      required: true, 
+      validator: (rule, value, callback) => {
+        if (!value || value.length === 0) {
+          callback(new Error('请至少添加一个技能'))
+        } else {
+          // 验证每个技能是否完整
+          for (let i = 0; i < value.length; i++) {
+            if (!value[i].skill_name || !value[i].skill_name.trim()) {
+              callback(new Error(`第${i + 1}个技能的名称不能为空`))
+              return
+            }
+            if (!value[i].skill_degree) {
+              callback(new Error(`第${i + 1}个技能的掌握程度不能为空`))
+              return
+            }
+          }
+          callback()
+        }
+      },
+      trigger: 'change'
+    }
+  ],
   spend_time: [{ required: true, message: '请输入可投入时间', trigger: 'blur' }],
   expect_worktype: [{ required: true, message: '请选择期待合作类型', trigger: 'blur' }],
   filter: [{ required: true, message: '请选择项目筛选条件', trigger: 'blur' }],
@@ -300,7 +350,7 @@ const uploadHeaders = computed(() => ({
 const handleTypeChange = () => {
   Object.keys(form).forEach(key => {
     if (key !== 'post_type') {
-      if (key === 'habit_tag') {
+      if (key === 'habit_tag' || key === 'skills') {
         form[key] = []
       } else {
         form[key] = ''
@@ -309,6 +359,27 @@ const handleTypeChange = () => {
   })
   if (form.post_type === 'research') {
     form.recruit_quantity = 1
+  }
+}
+
+// 添加技能
+const addSkill = () => {
+  form.skills.push({
+    skill_name: '',
+    skill_degree: ''
+  })
+}
+
+// 删除技能
+const removeSkill = (index) => {
+  form.skills.splice(index, 1)
+}
+
+// 验证技能名称
+const validateSkillName = (index) => {
+  const skill = form.skills[index]
+  if (skill && skill.skill_name && !skill.skill_name.trim()) {
+    ElMessage.warning('技能名称不能为空')
   }
 }
 
@@ -419,11 +490,16 @@ const handleSubmit = async () => {
             return
           }
           
+          // 准备技能数据
+          const skillsData = form.skills.map(skill => ({
+            skill_name: skill.skill_name.trim(),
+            skill_degree: skill.skill_degree
+          })).filter(skill => skill.skill_name) // 过滤掉空技能
+          
           const submitData = {
             student_id: parseInt(userStore.userInfo?.account),
             major: form.major,
-            skill: form.skill,
-            skill_degree: form.skill_degree,
+            skills: skillsData,
             project_experience: form.project_experience || '',
             experience_file: form.experience_link || null,
             habit_tag: tagsToString(form.habit_tag || []),
@@ -549,6 +625,7 @@ const handleReset = () => {
   fileList.value = []
   form.appendix = ''
   form.habit_tag = []
+  form.skills = []
 }
 </script>
 
@@ -607,6 +684,16 @@ const handleReset = () => {
   margin-top: 8px;
   font-size: 12px;
   color: #909399;
+}
+
+.skills-container {
+  width: 100%;
+}
+
+.skill-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
 }
 </style>
 

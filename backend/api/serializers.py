@@ -181,8 +181,12 @@ class PersonalPublishSerializer(serializers.Serializer):
     post_id = serializers.IntegerField(required=False, allow_null=True, help_text='项目ID（可选，用于更新）')
     student_id = serializers.IntegerField(help_text='学生ID')
     major = serializers.CharField(help_text='专业')
-    skill = serializers.CharField(help_text='技能')
-    skill_degree = serializers.CharField(help_text='技能程度: skillful/known')
+    skills = serializers.ListField(
+        child=serializers.DictField(
+            child=serializers.CharField()
+        ),
+        help_text='技能列表，每个技能包含skill_name和skill_degree'
+    )
     project_experience = serializers.CharField(required=False, allow_blank=True, help_text='项目经验')
     experience_file = serializers.CharField(required=False, allow_blank=True, allow_null=True, help_text='经验文件URL')
     habit_tag = serializers.CharField(required=False, allow_blank=True, help_text='习惯标签（字符串，如"人工智能"）')

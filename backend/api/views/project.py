@@ -10,6 +10,8 @@ from rest_framework import status
 
 from ..models import PostEntity, ResearchProject, CompetitionProject, SkillInformation
 from ..models import TeacherEntity, StudentEntity, Tag, PostTag
+from ..models import Skill, StudentSkill
+from ..models.direction import Direction, PostDirection
 from ..models.interaction import Like, Favorite, Comment
 from ..serializers import ResearchPublishSerializer, CompetitionPublishSerializer, PersonalPublishSerializer
 from ..utils.auth import login_required, get_user_from_token
@@ -405,6 +407,102 @@ def timestamp_to_datetime(timestamp_ms):
         raise ValueError(f'时间戳转换失败: {str(e)}')
 
 
+def get_or_create_direction(direction_name):
+    """获取或创建方向记录
+    
+    Args:
+        direction_name: 方向名称
+        
+    Returns:
+        Direction对象，如果direction_name为空则返回None
+    """
+    if not direction_name or not direction_name.strip():
+        return None
+    
+    direction_name = direction_name.strip()
+    direction, _ = Direction.objects.get_or_create(
+        direction_name=direction_name
+    )
+    return direction
+
+
+def sync_post_directions(post, direction_names):
+    """同步post的方向关联
+    
+    Args:
+        post: PostEntity对象
+        direction_names: 方向名称列表（可以是字符串或列表）
+    """
+    # 如果direction_names是字符串，转换为列表
+    if isinstance(direction_names, str):
+        # 如果包含逗号，按逗号分割；否则作为单个方向
+        if ',' in direction_names:
+            direction_names = [name.strip() for name in direction_names.split(',') if name.strip()]
+        else:
+            direction_names = [direction_names.strip()] if direction_names.strip() else []
+    
+    # 删除该post的所有旧方向关联
+    PostDirection.objects.filter(post=post).delete()
+    
+    # 创建新的方向关联
+    for direction_name in direction_names:
+        if not direction_name or not direction_name.strip():
+            continue
+        direction = get_or_create_direction(direction_name)
+        if direction:
+            PostDirection.objects.get_or_create(
+                post=post,
+                direction=direction
+            )
+
+
+def sync_post_skills(post, skills_data):
+    """同步post的技能关联
+    
+    Args:
+        post: PostEntity对象
+        skills_data: 技能列表，每个技能是字典，包含skill_name和skill_degree
+    """
+    # 技能程度映射：skillful=0, known=1
+    skill_degree_map = {
+        'skillful': 0,
+        'known': 1
+    }
+    
+    # 删除该post的所有旧技能关联
+    StudentSkill.objects.filter(post=post).delete()
+    
+    # 处理每个技能
+    for skill_item in skills_data:
+        skill_name = skill_item.get('skill_name', '').strip()
+        skill_degree_str = skill_item.get('skill_degree', '').strip()
+        
+        if not skill_name:
+            continue
+        
+        # 验证skill_degree
+        proficiency = skill_degree_map.get(skill_degree_str)
+        if proficiency is None:
+            continue  # 跳过无效的技能程度
+        
+        # 获取或创建Skill
+        skill, created = Skill.objects.get_or_create(
+            skill_name=skill_name,
+            defaults={'skill_name': skill_name}
+        )
+        
+        # 创建或更新StudentSkill关联
+        student_skill, created = StudentSkill.objects.get_or_create(
+            post=post,
+            skill=skill,
+            defaults={'proficiency': proficiency}
+        )
+        if not created:
+            # 如果已存在，更新熟练度
+            student_skill.proficiency = proficiency
+            student_skill.save()
+
+
 @api_view(['POST'])
 @login_required
 def publish_research(request):
@@ -488,14 +586,16 @@ def publish_research(request):
                             )
                         # 更新现有项目
                         existing_research.research_name = validated_data['research_name']
-                        existing_research.research_direction = validated_data['research_direction']
-                        existing_research.tech_stack = validated_data['tech_stack']
                         existing_research.recruit_quantity = validated_data['recruit_quantity']
                         existing_research.starttime = timestamp_to_datetime(validated_data['starttime'])
                         existing_research.endtime = timestamp_to_datetime(validated_data['endtime'])
                         existing_research.outcome = validated_data['outcome']
                         existing_research.contact = validated_data['contact']
                         existing_research.save()
+                        
+                        # 处理方向关联
+                        sync_post_directions(post, validated_data.get('research_direction', ''))
+                        
                         return Response(
                             {
                                 'code': 200,
@@ -526,15 +626,15 @@ def publish_research(request):
                 post=post,
                 teacher=teacher,
                 research_name=validated_data['research_name'],
-                research_direction=validated_data['research_direction'],
-                tech_stack=validated_data['tech_stack'],
                 recruit_quantity=validated_data['recruit_quantity'],
                 starttime=timestamp_to_datetime(validated_data['starttime']),
                 endtime=timestamp_to_datetime(validated_data['endtime']),
                 outcome=validated_data['outcome'],
-                contact=validated_data['contact'],
-                appendix=None
+                contact=validated_data['contact']
             )
+            
+            # 处理方向关联
+            sync_post_directions(post, validated_data.get('research_direction', ''))
             
             return Response(
                 {
@@ -746,8 +846,16 @@ def publish_personal(request):
         "post_id": 124,  # 可选
         "student_id": 124,
         "major": "网络工程",
-        "skill": "C/C++",
-        "skill_degree": "skillful",
+        "skills": [
+            {
+                "skill_name": "C/C++",
+                "skill_degree": "skillful"
+            },
+            {
+                "skill_name": "Python",
+                "skill_degree": "known"
+            }
+        ],
         "project_experience": "能独立开发驱动",
         "experience_file": "https://xxx.xxx.com/uploads/student/student_123/experience/uuid.pdf",
         "habit_tag": "人工智能",
@@ -802,42 +910,47 @@ def publish_personal(request):
                     status=status.HTTP_403_FORBIDDEN
                 )
             
-            # 处理 skill_degree：将前端字符串转换为后端整数
-            skill_degree_str = validated_data['skill_degree']
-            skill_degree_map = {
-                'skillful': 0,
-                'known': 1
-            }
-            skill_degree_int = skill_degree_map.get(skill_degree_str)
-            if skill_degree_int is None:
+            # 验证技能数组
+            skills_data = validated_data.get('skills', [])
+            if not skills_data or not isinstance(skills_data, list):
                 return Response(
-                    {'code': 400, 'msg': f'skill_degree 值无效: {skill_degree_str}，应为 skillful 或 known'},
+                    {'code': 400, 'msg': '技能列表不能为空'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
-            # 处理 expect_worktype：将前端字符串转换为后端整数
+            # 验证每个技能的数据格式
+            for skill_item in skills_data:
+                if not isinstance(skill_item, dict):
+                    return Response(
+                        {'code': 400, 'msg': '技能数据格式错误'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                skill_name = skill_item.get('skill_name', '').strip()
+                skill_degree = skill_item.get('skill_degree', '').strip()
+                if not skill_name:
+                    return Response(
+                        {'code': 400, 'msg': '技能名称不能为空'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                if skill_degree not in ['skillful', 'known']:
+                    return Response(
+                        {'code': 400, 'msg': f'技能程度值无效: {skill_degree}，应为 skillful 或 known'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            
+            # 处理 expect_worktype：验证字符串值
             expect_worktype_str = validated_data['expect_worktype']
-            expect_worktype_map = {
-                'research': 0,
-                'competition': 1,
-                'innovation': 2
-            }
-            expect_worktype_int = expect_worktype_map.get(expect_worktype_str)
-            if expect_worktype_int is None:
+            valid_expect_worktypes = ['research', 'competition', 'innovation']
+            if expect_worktype_str not in valid_expect_worktypes:
                 return Response(
                     {'code': 400, 'msg': f'expect_worktype 值无效: {expect_worktype_str}，应为 research、competition 或 innovation'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
-            # 处理 filter：将前端字符串转换为后端整数
+            # 处理 filter：验证字符串值
             filter_str = validated_data['filter']
-            filter_map = {
-                'all': 0,
-                'cross': 1,
-                'local': 2
-            }
-            filter_int = filter_map.get(filter_str)
-            if filter_int is None:
+            valid_filters = ['all', 'cross', 'local']
+            if filter_str not in valid_filters:
                 return Response(
                     {'code': 400, 'msg': f'filter 值无效: {filter_str}，应为 all、cross 或 local'},
                     status=status.HTTP_400_BAD_REQUEST
@@ -860,17 +973,20 @@ def publish_personal(request):
                                 status=status.HTTP_403_FORBIDDEN
                             )
                         # 更新现有项目
-                        existing_skill.major = validated_data['major']
-                        existing_skill.skill = validated_data['skill']
-                        existing_skill.skill_degree = skill_degree_int
                         existing_skill.project_experience = validated_data.get('project_experience', '')
                         existing_skill.experience_link = validated_data.get('experience_file') or None
                         existing_skill.habit_tag = habit_tag_str
                         existing_skill.spend_time = validated_data['spend_time']
-                        existing_skill.expect_worktype = expect_worktype_int
-                        existing_skill.filter = filter_int
-                        existing_skill.certification = validated_data.get('certification') or None
+                        existing_skill.expect_worktype = expect_worktype_str
+                        existing_skill.filter = filter_str
                         existing_skill.save()
+                        
+                        # 处理方向关联
+                        sync_post_directions(post, validated_data.get('major', ''))
+                        
+                        # 处理技能关联
+                        sync_post_skills(post, skills_data)
+                        
                         return Response(
                             {
                                 'code': 200,
@@ -900,17 +1016,19 @@ def publish_personal(request):
             SkillInformation.objects.create(
                 post=post,
                 student=student,
-                major=validated_data['major'],
-                skill=validated_data['skill'],
-                skill_degree=skill_degree_int,
                 project_experience=validated_data.get('project_experience', ''),
                 experience_link=validated_data.get('experience_file') or None,
                 habit_tag=habit_tag_str,
                 spend_time=validated_data['spend_time'],
-                expect_worktype=expect_worktype_int,
-                filter=filter_int,
-                certification=validated_data.get('certification') or None
+                expect_worktype=expect_worktype_str,
+                filter=filter_str
             )
+            
+            # 处理方向关联
+            sync_post_directions(post, validated_data.get('major', ''))
+            
+            # 处理技能关联
+            sync_post_skills(post, skills_data)
             
             return Response(
                 {
