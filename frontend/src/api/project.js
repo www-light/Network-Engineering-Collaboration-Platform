@@ -46,10 +46,28 @@ export const downloadFile = (fileUrl) => {
   })
 }
 
-// 发布项目
-export const publishProject = (data) => {
+// 发布科研项目
+export const publishResearch = (data) => {
   return request({
-    url: '/project/publish',
+    url: '/publish/research',
+    method: 'POST',
+    data
+  })
+}
+
+// 发布竞赛项目
+export const publishCompetition = (data) => {
+  return request({
+    url: '/publish/competition',
+    method: 'POST',
+    data
+  })
+}
+
+// 发布个人技能
+export const publishPersonal = (data) => {
+  return request({
+    url: '/publish/personal',
     method: 'POST',
     data
   })

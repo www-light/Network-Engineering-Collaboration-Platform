@@ -31,7 +31,7 @@
               </div>
               <ProjectCard
                 v-else
-                v-for="project in paginatedProjects"
+                v-for="project in filteredProjects"
                 :key="project.post_id"
                 :project="project"
                 :is-active="selectedProjectId === project.post_id"
@@ -90,27 +90,20 @@ const detailLoading = ref(false)
 const currentPage = ref(1)
 const pageSize = ref(20)
 
-// 由于后端已经支持筛选，这里直接使用store中的projects
+// 使用store中的项目和分页信息
 const filteredProjects = computed(() => projectStore.projects)
-
-const total = computed(() => filteredProjects.value.length)
-
-const paginatedProjects = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value
-  const end = start + pageSize.value
-  return filteredProjects.value.slice(start, end)
-})
+const total = computed(() => projectStore.total)
 
 onMounted(async () => {
-  await projectStore.fetchProjects()
+  await projectStore.fetchProjects(selectedDirection.value, currentPage.value, pageSize.value)
   if (projectStore.projects.length > 0) {
     handleProjectClick(projectStore.projects[0])
   }
 })
 
 const handleDirectionChange = async () => {
-  await projectStore.fetchProjects(selectedDirection.value === 'all' ? null : selectedDirection.value)
   currentPage.value = 1
+  await projectStore.fetchProjects(selectedDirection.value, currentPage.value, pageSize.value)
   if (filteredProjects.value.length > 0) {
     handleProjectClick(filteredProjects.value[0])
   } else {
@@ -181,13 +174,27 @@ const handleMessage = async () => {
   }
 }
 
-const handleSizeChange = (size) => {
+const handleSizeChange = async (size) => {
   pageSize.value = size
   currentPage.value = 1
+  await projectStore.fetchProjects(selectedDirection.value, currentPage.value, pageSize.value)
+  if (filteredProjects.value.length > 0) {
+    handleProjectClick(filteredProjects.value[0])
+  } else {
+    selectedProjectId.value = null
+    currentDetail.value = null
+  }
 }
 
-const handlePageChange = (page) => {
+const handlePageChange = async (page) => {
   currentPage.value = page
+  await projectStore.fetchProjects(selectedDirection.value, currentPage.value, pageSize.value)
+  if (filteredProjects.value.length > 0) {
+    handleProjectClick(filteredProjects.value[0])
+  } else {
+    selectedProjectId.value = null
+    currentDetail.value = null
+  }
 }
 
 const handleDetailUpdate = (updatedDetail) => {

@@ -228,7 +228,7 @@ import { useUserStore } from '@/store/user'
 import { Plus, Upload, Check, Refresh } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getTags, createTag } from '@/api/tag'
-import { publishProject } from '@/api/project'
+import { publishResearch, publishCompetition, publishPersonal } from '@/api/project'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -338,6 +338,26 @@ const loadTags = async () => {
   }
 }
 
+// 将日期字符串转换为Unix时间戳（毫秒）
+const dateToTimestamp = (dateStr) => {
+  if (!dateStr) return null
+  // 如果已经是时间戳，直接返回
+  if (typeof dateStr === 'number') return dateStr
+  // 将日期字符串转换为时间戳（毫秒）
+  return new Date(dateStr).getTime()
+}
+
+// 将标签ID数组转换为字符串（用逗号分隔标签名称）
+const tagsToString = (tagIds) => {
+  if (!tagIds || tagIds.length === 0) return ''
+  // 从标签列表中获取标签名称
+  const tagNames = tagIds.map(id => {
+    const tag = tagsList.value.find(t => t.tag_id === id)
+    return tag ? tag.name : ''
+  }).filter(name => name)
+  return tagNames.join(',')
+}
+
 const handleSubmit = async () => {
   if (!formRef.value) return
   
@@ -345,43 +365,80 @@ const handleSubmit = async () => {
     if (valid) {
       loading.value = true
       try {
-        // 构建提交数据
-        const submitData = {
-          post_type: form.post_type,
-          appendix: form.appendix || ''
-        }
+        let response
         
-        // 根据项目类型添加对应字段
+        // 根据项目类型调用不同的接口
         if (form.post_type === 'research') {
-          submitData.research_name = form.research_name
-          submitData.research_direction = form.research_direction
-          submitData.tech_stack = form.tech_stack
-          submitData.recruit_quantity = form.recruit_quantity
-          submitData.starttime = form.starttime
-          submitData.endtime = form.endtime
-          submitData.outcome = form.outcome
-          submitData.contact = form.contact
+          // 验证用户必须是教师
+          if (!userStore.isTeacher) {
+            ElMessage.error('只有教师可以发布科研项目')
+            loading.value = false
+            return
+          }
+          
+          const submitData = {
+            teacher_id: parseInt(userStore.userInfo?.account),
+            research_name: form.research_name,
+            research_direction: form.research_direction,
+            tech_stack: form.tech_stack,
+            recruit_quantity: form.recruit_quantity,
+            starttime: dateToTimestamp(form.starttime),
+            endtime: dateToTimestamp(form.endtime),
+            outcome: form.outcome,
+            contact: form.contact
+          }
+          
+          response = await publishResearch(submitData)
+          
         } else if (form.post_type === 'competition') {
-          submitData.competition_name = form.competition_name
-          submitData.competition_type = form.competition_type
-          submitData.deadline = form.deadline
-          submitData.team_require = form.team_require
-          submitData.guide_way = form.guide_way
-          submitData.reward = form.reward || ''
+          // 验证用户必须是教师
+          if (!userStore.isTeacher) {
+            ElMessage.error('只有教师可以发布竞赛项目')
+            loading.value = false
+            return
+          }
+          
+          const submitData = {
+            teacher_id: parseInt(userStore.userInfo?.account),
+            competition_type: form.competition_type,
+            competition_name: form.competition_name,
+            deadline: dateToTimestamp(form.deadline),
+            team_require: form.team_require,
+            guide_way: form.guide_way,
+            reward: form.reward || null,
+            appendix: form.appendix || null
+          }
+          
+          response = await publishCompetition(submitData)
+          
         } else if (form.post_type === 'personal') {
-          submitData.major = form.major
-          submitData.skill = form.skill
-          submitData.skill_degree = form.skill_degree
-          submitData.project_experience = form.project_experience || ''
-          submitData.experience_link = form.experience_link || ''
-          submitData.habit_tag = form.habit_tag || []
-          submitData.spend_time = form.spend_time
-          submitData.expect_worktype = form.expect_worktype
-          submitData.filter = form.filter
+          // 验证用户必须是学生
+          if (!userStore.isStudent) {
+            ElMessage.error('只有学生可以发布个人技能')
+            loading.value = false
+            return
+          }
+          
+          const submitData = {
+            student_id: parseInt(userStore.userInfo?.account),
+            major: form.major,
+            skill: form.skill,
+            skill_degree: form.skill_degree,
+            project_experience: form.project_experience || '',
+            experience_file: form.experience_link || null,
+            habit_tag: tagsToString(form.habit_tag || []),
+            spend_time: form.spend_time,
+            expect_worktype: form.expect_worktype,
+            filter: form.filter,
+            certification: form.appendix || null
+          }
+          
+          response = await publishPersonal(submitData)
+        } else {
+          ElMessage.error('未知的项目类型')
+          loading.value = false
+          return
         }
-        
-        // 调用发布项目接口
-        const response = await publishProject(submitData)
         
         // 处理响应：检查 code 和 data.post_id
         if (response && response.code === 200) {

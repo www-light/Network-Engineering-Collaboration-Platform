@@ -4,7 +4,8 @@ from .views import (
     create_conversation, list_conversations, close_conversation,
     send_message, list_messages,
     tags,
-    publish_project, list_projects, get_project_detail
+    list_projects, get_project_detail,
+    publish_research, publish_competition, publish_personal
 )
 
 urlpatterns = [
@@ -28,11 +29,13 @@ urlpatterns = [
     # 标签
     path('tags/', tags, name='tags'),
     
-    # 项目发布
-    path('project/publish', publish_project, name='publish_project'),
-    # 项目列表
-    path('project/list', list_projects, name='list_projects'),
-    # 项目详情
-    path('project/detail/<int:post_id>', get_project_detail, name='get_project_detail'),
+    # 项目
+    path('project/list', list_projects, name='list_projects'),  # 项目列表
+    path('project/detail/<int:post_id>', get_project_detail, name='get_project_detail'),    # 项目详情
+    
+    # 项目发布接口
+    path('publish/research', publish_research, name='publish_research'),   # 科研项目发布
+    path('publish/competition', publish_competition, name='publish_competition'),   # 竞赛项目发布
+    path('publish/personal', publish_personal, name='publish_personal'),   # 个人技能发布
 ]
 

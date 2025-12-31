@@ -6,29 +6,60 @@ export const useProjectStore = defineStore('project', () => {
   const projects = ref([])
   const currentDirection = ref('all')
   const loading = ref(false)
+  const total = ref(0)
+  const page = ref(1)
+  const pageSize = ref(20)
+  const totalPages = ref(0)
 
-  // 获取项目列表
-  const fetchProjects = async (direction) => {
+  // 获取项目列表（支持分页）
+  const fetchProjects = async (direction, pageNum = 1, size = 20) => {
     loading.value = true
     try {
-      // 构建查询参数，如果指定了方向则传递给后端
-      const params = direction && direction !== 'all' ? { post_type: direction } : {}
+      // 构建查询参数
+      const params = {
+        page: pageNum,
+        page_size: size
+      }
+      if (direction && direction !== 'all') {
+        params.post_type = direction
+      }
+      
       const response = await getProjects(params)
-      // 处理响应：如果有 code 字段，提取 data；否则直接使用
+      
+      // 处理响应
       if (response && response.code === 200 && response.data !== undefined) {
-        projects.value = response.data || []
+        const data = response.data
+        // 新格式：包含分页信息
+        if (data.items) {
+          projects.value = data.items || []
+          total.value = data.total || 0
+          page.value = data.page || 1
+          pageSize.value = data.page_size || 20
+          totalPages.value = data.total_pages || 0
+        } else if (Array.isArray(data)) {
+          // 兼容旧格式（直接返回数组）
+          projects.value = data
+          total.value = data.length
+        } else {
+          projects.value = []
+          total.value = 0
+        }
       } else if (Array.isArray(response)) {
         // 兼容旧格式（直接返回数组）
         projects.value = response
+        total.value = response.length
       } else {
         projects.value = []
+        total.value = 0
       }
+      
       if (direction) {
         currentDirection.value = direction
       }
     } catch (error) {
       console.error('获取项目列表失败:', error)
       projects.value = []
+      total.value = 0
     } finally {
       loading.value = false
     }
@@ -38,6 +69,10 @@ export const useProjectStore = defineStore('project', () => {
     projects,
     currentDirection,
     loading,
+    total,
+    page,
+    pageSize,
+    totalPages,
     fetchProjects
   }
 })

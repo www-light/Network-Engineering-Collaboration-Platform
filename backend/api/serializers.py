@@ -149,75 +149,44 @@ class LoginResponseSerializer(serializers.Serializer):
     token = serializers.CharField()
 
 
-class ProjectPublishSerializer(serializers.Serializer):
-    """项目发布序列化器"""
-    post_type = serializers.CharField(help_text='项目类型: research-科研项目, competition-竞赛项目, personal-个人技能')
-    
-    # 科研项目字段
-    research_name = serializers.CharField(required=False, allow_blank=True)
-    research_direction = serializers.CharField(required=False, allow_blank=True)
-    tech_stack = serializers.CharField(required=False, allow_blank=True)
-    recruit_quantity = serializers.IntegerField(required=False)
-    starttime = serializers.CharField(required=False, allow_blank=True)
-    endtime = serializers.CharField(required=False, allow_blank=True)
-    outcome = serializers.CharField(required=False, allow_blank=True)
-    contact = serializers.CharField(required=False, allow_blank=True)
-    
-    # 竞赛项目字段
-    competition_name = serializers.CharField(required=False, allow_blank=True)
-    competition_type = serializers.CharField(required=False, allow_blank=True)
-    deadline = serializers.CharField(required=False, allow_blank=True)
-    team_require = serializers.CharField(required=False, allow_blank=True)
-    guide_way = serializers.CharField(required=False, allow_blank=True)
-    reward = serializers.CharField(required=False, allow_blank=True)
-    
-    # 个人技能字段
-    major = serializers.CharField(required=False, allow_blank=True)
-    skill = serializers.CharField(required=False, allow_blank=True)
-    skill_degree = serializers.CharField(required=False, allow_blank=True)
-    project_experience = serializers.CharField(required=False, allow_blank=True)
-    experience_link = serializers.CharField(required=False, allow_blank=True)
-    habit_tag = serializers.ListField(
-        child=serializers.IntegerField(),
-        required=False,
-        allow_empty=True
-    )
-    spend_time = serializers.CharField(required=False, allow_blank=True)
-    expect_worktype = serializers.CharField(required=False, allow_blank=True)
-    filter = serializers.CharField(required=False, allow_blank=True)
-    
-    # 通用字段
-    appendix = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    
-    def validate_post_type(self, value):
-        """验证项目类型"""
-        if value not in ['research', 'competition', 'personal']:
-            raise serializers.ValidationError("post_type 必须是 research、competition 或 personal")
-        return value
-    
-    def validate(self, attrs):
-        """根据项目类型验证必填字段"""
-        post_type = attrs.get('post_type')
-        
-        if post_type == 'research':
-            required_fields = ['research_name', 'research_direction', 'tech_stack', 
-                             'recruit_quantity', 'starttime', 'endtime', 'outcome', 'contact']
-            for field in required_fields:
-                if not attrs.get(field):
-                    raise serializers.ValidationError({field: f"{field} 是必填字段"})
-        
-        elif post_type == 'competition':
-            required_fields = ['competition_name', 'competition_type', 'deadline', 
-                             'team_require', 'guide_way']
-            for field in required_fields:
-                if not attrs.get(field):
-                    raise serializers.ValidationError({field: f"{field} 是必填字段"})
-        
-        elif post_type == 'personal':
-            required_fields = ['major', 'skill', 'skill_degree', 'spend_time', 
-                             'expect_worktype', 'filter']
-            for field in required_fields:
-                if not attrs.get(field):
-                    raise serializers.ValidationError({field: f"{field} 是必填字段"})
-        
-        return attrs
+class ResearchPublishSerializer(serializers.Serializer):
+    """科研项目发布序列化器"""
+    post_id = serializers.IntegerField(required=False, allow_null=True, help_text='项目ID（可选，用于更新）')
+    teacher_id = serializers.IntegerField(help_text='教师ID')
+    research_name = serializers.CharField(help_text='科研项目名称')
+    research_direction = serializers.CharField(help_text='研究方向')
+    tech_stack = serializers.CharField(help_text='技术栈')
+    recruit_quantity = serializers.IntegerField(help_text='招募数量')
+    starttime = serializers.IntegerField(help_text='开始时间（Unix时间戳，毫秒）')
+    endtime = serializers.IntegerField(help_text='结束时间（Unix时间戳，毫秒）')
+    outcome = serializers.CharField(help_text='预期成果')
+    contact = serializers.CharField(help_text='联系方式')
+
+
+class CompetitionPublishSerializer(serializers.Serializer):
+    """竞赛项目发布序列化器"""
+    post_id = serializers.IntegerField(required=False, allow_null=True, help_text='项目ID（可选，用于更新）')
+    teacher_id = serializers.IntegerField(help_text='教师ID')
+    competition_type = serializers.CharField(help_text='竞赛类型: IETP/AC/CC')
+    competition_name = serializers.CharField(help_text='竞赛名称')
+    deadline = serializers.IntegerField(help_text='截止时间（Unix时间戳，毫秒）')
+    team_require = serializers.CharField(help_text='团队要求')
+    guide_way = serializers.CharField(help_text='指导方式: online/offline')
+    reward = serializers.CharField(required=False, allow_blank=True, allow_null=True, help_text='奖励')
+    appendix = serializers.CharField(required=False, allow_blank=True, allow_null=True, help_text='附件URL')
+
+
+class PersonalPublishSerializer(serializers.Serializer):
+    """个人技能发布序列化器"""
+    post_id = serializers.IntegerField(required=False, allow_null=True, help_text='项目ID（可选，用于更新）')
+    student_id = serializers.IntegerField(help_text='学生ID')
+    major = serializers.CharField(help_text='专业')
+    skill = serializers.CharField(help_text='技能')
+    skill_degree = serializers.CharField(help_text='技能程度: skillful/known')
+    project_experience = serializers.CharField(required=False, allow_blank=True, help_text='项目经验')
+    experience_file = serializers.CharField(required=False, allow_blank=True, allow_null=True, help_text='经验文件URL')
+    habit_tag = serializers.CharField(required=False, allow_blank=True, help_text='习惯标签（字符串，如"人工智能"）')
+    spend_time = serializers.CharField(help_text='可投入时间')
+    expect_worktype = serializers.CharField(help_text='期望工作类型: research/competition/innovation')
+    filter = serializers.CharField(help_text='筛选条件: all/cross/local')
+    certification = serializers.CharField(required=False, allow_blank=True, allow_null=True, help_text='证书URL')
