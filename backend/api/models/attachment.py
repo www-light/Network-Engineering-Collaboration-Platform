@@ -36,8 +36,8 @@ class PostAttachment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='更新时间')
     is_active = models.BooleanField(default=True, verbose_name='是否活跃')
-    download_url = models.URLField(max_length=500, verbose_name='下载URL')
-    formatted_size = models.CharField(max_length=50, verbose_name='格式化文件大小', help_text='如: 1.5MB')
+    download_url = models.URLField(max_length=500, verbose_name='下载URL', blank=True, null=True)
+    formatted_size = models.CharField(max_length=50, verbose_name='格式化文件大小', help_text='如: 1.5MB', blank=True, null=True)
     
     class Meta:
         db_table = 'Post_attachment'
