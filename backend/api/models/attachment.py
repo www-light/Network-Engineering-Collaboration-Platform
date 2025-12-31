@@ -30,7 +30,7 @@ class PostAttachment(models.Model):
     mime_type = models.CharField(max_length=100, verbose_name='MIME类型')
     file_type = models.SmallIntegerField(
         choices=FILE_TYPES,
-        default=5,
+        default=4,
         verbose_name='文件类型'
     )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
