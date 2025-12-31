@@ -10,7 +10,7 @@ from .interaction import Like, Favorite, Comment
 from .message import Conversation, Message
 from .cooperation import TeacherStudentCooperation
 from .skill import Skill, StudentSkill
-from .direction import TechStack, Direction, ResearchDirection, PostDirection
+from .direction import TechStack, Direction, PostStack, PostDirection
 from .attachment import PostAttachment
 
 __all__ = [
@@ -33,7 +33,7 @@ __all__ = [
     'StudentSkill',
     'TechStack',
     'Direction',
-    'ResearchDirection',
+    'PostStack',
     'PostDirection',
     'PostAttachment',
 ]

@@ -12,9 +12,8 @@ class PostAttachment(models.Model):
     FILE_TYPES = (
         (1, '科研材料'),
         (2, '大创或竞赛'),
-        (3, '个人项目经历'),
-        (4, '个人证书简历'),
-        (5, '其他' ),
+        (3, '个人证书简历'),
+        (4, '其他' ),
     )
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, verbose_name='附件ID')

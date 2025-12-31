@@ -23,8 +23,6 @@ class ResearchProject(models.Model):
         verbose_name='教师ID'
     )
     research_name = models.CharField(max_length=255, verbose_name='科研项目名称')
-    research_direction = models.CharField(max_length=255, verbose_name='研究方向')
-    tech_stack = models.CharField(max_length=255, verbose_name='技术栈')
     recruit_quantity = models.IntegerField(verbose_name='招募数量')
     starttime = models.DateTimeField(verbose_name='开始时间')
     endtime = models.DateTimeField(verbose_name='结束时间')
@@ -88,9 +86,6 @@ class SkillInformation(models.Model):
         db_column='student_id',
         verbose_name='学生ID'
     )
-    major = models.CharField(max_length=255, verbose_name='专业')
-    skill = models.CharField(max_length=255, verbose_name='技能')
-    skill_degree = models.CharField(max_length=255, verbose_name='技能程度')
     project_experience = models.CharField(max_length=255, verbose_name='项目经验')
     experience_file = models.CharField(max_length=255, blank=True, null=True, verbose_name='经验文件')
     habit_tag = models.CharField(max_length=255, verbose_name='习惯标签')
@@ -105,5 +100,5 @@ class SkillInformation(models.Model):
         ordering = ['-post__create_time']
     
     def __str__(self):
-        return f'{self.student.student_name} - {self.skill}'
+        return f'{self.student.student_name} 的技能信息'
 

@@ -36,8 +36,8 @@ class Direction(models.Model):
         return f'{self.direction_name} (ID: {self.direction_id})'
 
 
-class ResearchDirection(models.Model):
-    """科研方向关联表（Post与TechStack的关联）"""
+class PostStack(models.Model):
+    """技术栈关联表（Post与TechStack的关联）"""
     id = models.AutoField(primary_key=True, verbose_name='关联ID')
     post = models.ForeignKey(
         PostEntity,
@@ -53,9 +53,9 @@ class ResearchDirection(models.Model):
     )
     
     class Meta:
-        db_table = 'Research_direction'
-        verbose_name = '科研方向'
-        verbose_name_plural = '科研方向'
+        db_table = 'Post_stack'
+        verbose_name = '技术栈'
+        verbose_name_plural = '技术栈'
         unique_together = [['post', 'stack']]
         ordering = ['id']
     
@@ -64,7 +64,7 @@ class ResearchDirection(models.Model):
 
 
 class PostDirection(models.Model):
-    """发布方向关联表（Post与Direction的关联）"""
+    """发布的方向关联表（Post与Direction的关联）"""
     id = models.AutoField(primary_key=True, verbose_name='关联ID')
     post = models.ForeignKey(
         PostEntity,
