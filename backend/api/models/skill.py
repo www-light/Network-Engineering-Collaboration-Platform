@@ -3,7 +3,6 @@
 包括：Skill, StudentSkill
 """
 from django.db import models
-from .user import StudentEntity
 from .post import PostEntity
 
 class Skill(models.Model):
@@ -46,4 +45,4 @@ class StudentSkill(models.Model):
         ordering = ['id']
     
     def __str__(self):
-        return f'Post {self.post_id} - 技能 {self.skill.skill_name} (熟练度: {self.proficiency})'
+        return f'Post {self.post} - 技能 {self.skill.skill_name} (熟练度: {self.proficiency})'

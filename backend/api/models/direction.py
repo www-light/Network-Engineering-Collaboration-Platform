@@ -60,7 +60,7 @@ class ResearchDirection(models.Model):
         ordering = ['id']
     
     def __str__(self):
-        return f'Post {self.post_id} - Stack {self.stack.tech_stack}'
+        return f'Post {self.post} - Stack {self.stack.tech_stack}'
 
 
 class PostDirection(models.Model):
@@ -87,4 +87,4 @@ class PostDirection(models.Model):
         ordering = ['id']
     
     def __str__(self):
-        return f'Post {self.post_id} - Direction {self.direction.direction_name}'
+        return f'Post {self.post} - Direction {self.direction.direction_name}'
