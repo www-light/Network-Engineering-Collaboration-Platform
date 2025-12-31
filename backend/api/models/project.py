@@ -23,14 +23,11 @@ class ResearchProject(models.Model):
         verbose_name='教师ID'
     )
     research_name = models.CharField(max_length=255, verbose_name='科研项目名称')
-    research_direction = models.CharField(max_length=255, verbose_name='研究方向')
-    tech_stack = models.CharField(max_length=255, verbose_name='技术栈')
     recruit_quantity = models.IntegerField(verbose_name='招募数量')
     starttime = models.DateTimeField(verbose_name='开始时间')
     endtime = models.DateTimeField(verbose_name='结束时间')
     outcome = models.CharField(max_length=255, verbose_name='预期成果')
     contact = models.CharField(max_length=255, verbose_name='联系方式')
-    appendix = models.CharField(max_length=255, blank=True, null=True, verbose_name='附件')
     
     class Meta:
         db_table = 'Research_project'
@@ -79,7 +76,6 @@ class CompetitionProject(models.Model):
         verbose_name='指导方式'
     )
     reward = models.CharField(max_length=255, blank=True, null=True, verbose_name='奖励')
-    appendix = models.CharField(max_length=255, blank=True, null=True, verbose_name='附件')
     
     class Meta:
         db_table = 'Competition_project'
@@ -106,40 +102,12 @@ class SkillInformation(models.Model):
         db_column='student_id',
         verbose_name='学生ID'
     )
-    major = models.CharField(max_length=255, verbose_name='专业')
-    skill = models.CharField(max_length=255, verbose_name='技能')
-    skill_degree = models.SmallIntegerField(
-        choices=[
-            (0, 'skillful'),
-            (1, 'known')
-        ],
-        default=0,
-        verbose_name='技能程度'
-    )
     project_experience = models.CharField(max_length=255, verbose_name='项目经验')
     experience_link = models.CharField(max_length=255, blank=True, null=True, verbose_name='经验链接')
     habit_tag = models.CharField(max_length=255, verbose_name='习惯标签')
     spend_time = models.CharField(max_length=255, verbose_name='可投入时间')
-    expect_worktype = models.SmallIntegerField(
-        choices=[
-            (0, 'research'),
-            (1, 'competition'),
-            (2, 'innovation'),
-        ],
-        default=0,
-        verbose_name='期望合作类型'
-    )
-    filter = models.SmallIntegerField(
-        choices=[
-            (0, 'all'),
-            (1, 'cross'),
-            (2, 'local')
-        ],
-        default=0,
-        verbose_name='筛选条件',
-        help_text='all-- 全部, cross-- 可接受跨方向合作, local-- 优先本地项目'
-    )
-    certification = models.CharField(max_length=255, blank=True, null=True, verbose_name='证书')
+    expect_worktype = models.CharField(max_length=255, verbose_name='期望工作类型')
+    filter = models.CharField(max_length=255, verbose_name='筛选条件')
     
     class Meta:
         db_table = 'Skill_information'
@@ -148,4 +116,5 @@ class SkillInformation(models.Model):
         ordering = ['-post__create_time']
     
     def __str__(self):
-        return f'{self.student.student_name} - {self.skill}'
+        return f'{self.student.student_name} 的技能信息'
+
