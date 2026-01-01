@@ -73,3 +73,18 @@ export const publishPersonal = (data) => {
   })
 }
 
+// 上传附件
+export const uploadAttachment = (postId, file) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('post_id', postId)
+  return request({
+    url: '/attachments/upload',
+    method: 'POST',
+    data: formData,
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
+}
+

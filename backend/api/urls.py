@@ -5,7 +5,8 @@ from .views import (
     send_message, list_messages,
     tags,
     list_projects, get_project_detail,
-    publish_research, publish_competition, publish_personal
+    publish_research, publish_competition, publish_personal,
+    upload_attachment, download_attachment
 )
 
 urlpatterns = [
@@ -37,5 +38,9 @@ urlpatterns = [
     path('publish/research', publish_research, name='publish_research'),   # 科研项目发布
     path('publish/competition', publish_competition, name='publish_competition'),   # 竞赛项目发布
     path('publish/personal', publish_personal, name='publish_personal'),   # 个人技能发布
+    
+    # 附件接口
+    path('attachments/upload', upload_attachment, name='upload_attachment'),   # 上传附件
+    path('files/<uuid:file_id>/download', download_attachment, name='download_attachment'),   # 下载附件
 ]
 

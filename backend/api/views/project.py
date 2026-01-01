@@ -11,6 +11,8 @@ from rest_framework import status
 from ..models import PostEntity, ResearchProject, CompetitionProject, SkillInformation
 from ..models import TeacherEntity, StudentEntity, Tag, PostTag
 from ..models import Skill, StudentSkill
+from ..models.attachment import PostAttachment
+from ..models.direction import PostDirection, PostStack, TechStack, Direction
 from ..models.direction import Direction, PostDirection
 from ..models.interaction import Like, Favorite, Comment
 from ..serializers import ResearchPublishSerializer, CompetitionPublishSerializer, PersonalPublishSerializer
@@ -281,17 +283,26 @@ def get_project_detail(request, post_id):
         if post.post_type == 1:  # 科研项目
             try:
                 research = ResearchProject.objects.select_related('teacher', 'post').get(post_id=post_id)
+                
+                # 从关联表中获取research_direction和tech_stack
+                post_directions = PostDirection.objects.filter(post=post).select_related('direction')
+                research_directions = [pd.direction.direction_name for pd in post_directions]
+                research_direction = ', '.join(research_directions) if research_directions else ''
+                
+                post_stacks = PostStack.objects.filter(post=post).select_related('stack')
+                tech_stacks = [ps.stack.tech_stack for ps in post_stacks]
+                tech_stack = ', '.join(tech_stacks) if tech_stacks else ''
+                
                 result.update({
                     'post_type': 'research',
                     'research_name': research.research_name,
-                    'research_direction': research.research_direction,
-                    'tech_stack': research.tech_stack,
+                    'research_direction': research_direction,
+                    'tech_stack': tech_stack,
                     'recruit_quantity': research.recruit_quantity,
                     'starttime': research.starttime.isoformat() if research.starttime else None,
                     'endtime': research.endtime.isoformat() if research.endtime else None,
                     'outcome': research.outcome,
                     'contact': research.contact,
-                    'appendix': research.appendix,
                     'teacher_name': research.teacher.teacher_name,
                     'teacher_id': research.teacher.teacher_id
                 })
@@ -321,7 +332,6 @@ def get_project_detail(request, post_id):
                     'team_require': competition.team_require,
                     'guide_way': guide_way_str,
                     'reward': competition.reward,
-                    'appendix': competition.appendix,
                     'teacher_name': competition.teacher.teacher_name,
                     'teacher_id': competition.teacher.teacher_id
                 })
@@ -335,17 +345,10 @@ def get_project_detail(request, post_id):
             try:
                 skill = SkillInformation.objects.select_related('student', 'post').get(post_id=post_id)
                 
-                # 将 skill_degree 整数转换为字符串
-                skill_degree_map = {0: 'skillful', 1: 'known'}
-                skill_degree_str = skill_degree_map.get(skill.skill_degree, 'unknown')
-                
-                # 将 expect_worktype 整数转换为字符串
-                expect_worktype_map = {0: 'research', 1: 'competition', 2: 'innovation'}
-                expect_worktype_str = expect_worktype_map.get(skill.expect_worktype, 'unknown')
-                
-                # 将 filter 整数转换为字符串
-                filter_map = {0: 'all', 1: 'cross', 2: 'local'}
-                filter_str = filter_map.get(skill.filter, 'unknown')
+                # 从关联表中获取major（专业方向）
+                post_directions = PostDirection.objects.filter(post=post).select_related('direction')
+                major_directions = [pd.direction.direction_name for pd in post_directions]
+                major = ', '.join(major_directions) if major_directions else ''
                 
                 # 获取该项目的标签
                 post_tags = PostTag.objects.filter(post=post).select_related('tag')
@@ -354,18 +357,26 @@ def get_project_detail(request, post_id):
                     for pt in post_tags
                 ]
                 
+                # 获取该项目的技能
+                student_skills = StudentSkill.objects.filter(post=post).select_related('skill')
+                skills_list = [
+                    {
+                        'skill_name': ss.skill.skill_name,
+                        'skill_degree': 'skillful' if ss.proficiency == 0 else 'known'
+                    }
+                    for ss in student_skills
+                ]
+                
                 result.update({
                     'post_type': 'personal',
-                    'major': skill.major,
-                    'skill': skill.skill,
-                    'skill_degree': skill_degree_str,
+                    'major': major,
+                    'skills': skills_list,
                     'project_experience': skill.project_experience,
                     'experience_link': skill.experience_link,
                     'habit_tag': skill.habit_tag,
                     'spend_time': skill.spend_time,
-                    'expect_worktype': expect_worktype_str,
-                    'filter': filter_str,
-                    'certification': skill.certification,
+                    'expect_worktype': skill.expect_worktype,
+                    'filter': skill.filter,
                     'student_name': skill.student.student_name,
                     'student_id': skill.student.student_id,
                     'tags': tags_list  # 添加标签列表
@@ -375,6 +386,29 @@ def get_project_detail(request, post_id):
                     {'code': 404, 'msg': '个人技能信息不存在'},
                     status=status.HTTP_404_NOT_FOUND
                 )
+        
+        # 获取项目的附件列表
+        attachments = PostAttachment.objects.filter(
+            post=post,
+            is_active=True
+        ).order_by('-created_at')
+        
+        attachments_list = [
+            {
+                'attachment_id': str(att.id),
+                'original_filename': att.original_filename,
+                'file_size': att.file_size,
+                'formatted_size': att.formatted_size,
+                'mime_type': att.mime_type,
+                'file_type': att.file_type,
+                'download_url': att.download_url,
+                'created_at': att.created_at.isoformat() if att.created_at else None
+            }
+            for att in attachments
+        ]
+        
+        # 将附件列表添加到结果中
+        result['attachments'] = attachments_list
         
         return Response(
             {
@@ -453,6 +487,55 @@ def sync_post_directions(post, direction_names):
             PostDirection.objects.get_or_create(
                 post=post,
                 direction=direction
+            )
+
+
+def get_or_create_tech_stack(stack_name):
+    """获取或创建技术栈记录
+    
+    Args:
+        stack_name: 技术栈名称
+        
+    Returns:
+        TechStack对象，如果stack_name为空则返回None
+    """
+    if not stack_name or not stack_name.strip():
+        return None
+    
+    stack_name = stack_name.strip()
+    tech_stack, _ = TechStack.objects.get_or_create(
+        tech_stack=stack_name
+    )
+    return tech_stack
+
+
+def sync_post_stacks(post, stack_names):
+    """同步post的技术栈关联
+    
+    Args:
+        post: PostEntity对象
+        stack_names: 技术栈名称列表（可以是字符串或列表）
+    """
+    # 如果stack_names是字符串，转换为列表
+    if isinstance(stack_names, str):
+        # 如果包含逗号，按逗号分割；否则作为单个技术栈
+        if ',' in stack_names:
+            stack_names = [name.strip() for name in stack_names.split(',') if name.strip()]
+        else:
+            stack_names = [stack_names.strip()] if stack_names.strip() else []
+    
+    # 删除该post的所有旧技术栈关联
+    PostStack.objects.filter(post=post).delete()
+    
+    # 创建新的技术栈关联
+    for stack_name in stack_names:
+        if not stack_name or not stack_name.strip():
+            continue
+        tech_stack = get_or_create_tech_stack(stack_name)
+        if tech_stack:
+            PostStack.objects.get_or_create(
+                post=post,
+                stack=tech_stack
             )
 
 
@@ -593,8 +676,9 @@ def publish_research(request):
                         existing_research.contact = validated_data['contact']
                         existing_research.save()
                         
-                        # 处理方向关联
+                        # 处理方向和技术栈关联
                         sync_post_directions(post, validated_data.get('research_direction', ''))
+                        sync_post_stacks(post, validated_data.get('tech_stack', ''))
                         
                         return Response(
                             {
@@ -633,8 +717,9 @@ def publish_research(request):
                 contact=validated_data['contact']
             )
             
-            # 处理方向关联
+            # 处理方向和技术栈关联
             sync_post_directions(post, validated_data.get('research_direction', ''))
+            sync_post_stacks(post, validated_data.get('tech_stack', ''))
             
             return Response(
                 {
@@ -771,7 +856,6 @@ def publish_competition(request):
                         existing_competition.team_require = validated_data['team_require']
                         existing_competition.guide_way = guide_way_int
                         existing_competition.reward = validated_data.get('reward') or None
-                        existing_competition.appendix = validated_data.get('appendix') or None
                         existing_competition.save()
                         return Response(
                             {
@@ -807,8 +891,7 @@ def publish_competition(request):
                 deadline=timestamp_to_datetime(validated_data['deadline']),
                 team_require=validated_data['team_require'],
                 guide_way=guide_way_int,
-                reward=validated_data.get('reward') or None,
-                appendix=validated_data.get('appendix') or None
+                reward=validated_data.get('reward') or None
             )
             
             return Response(
@@ -974,7 +1057,7 @@ def publish_personal(request):
                             )
                         # 更新现有项目
                         existing_skill.project_experience = validated_data.get('project_experience', '')
-                        existing_skill.experience_link = validated_data.get('experience_file') or None
+                        existing_skill.experience_link = validated_data.get('experience_link') or None
                         existing_skill.habit_tag = habit_tag_str
                         existing_skill.spend_time = validated_data['spend_time']
                         existing_skill.expect_worktype = expect_worktype_str
@@ -1017,7 +1100,7 @@ def publish_personal(request):
                 post=post,
                 student=student,
                 project_experience=validated_data.get('project_experience', ''),
-                experience_link=validated_data.get('experience_file') or None,
+                experience_link=validated_data.get('experience_link') or None,
                 habit_tag=habit_tag_str,
                 spend_time=validated_data['spend_time'],
                 expect_worktype=expect_worktype_str,

@@ -173,7 +173,6 @@ class CompetitionPublishSerializer(serializers.Serializer):
     team_require = serializers.CharField(help_text='团队要求')
     guide_way = serializers.CharField(help_text='指导方式: online/offline')
     reward = serializers.CharField(required=False, allow_blank=True, allow_null=True, help_text='奖励')
-    appendix = serializers.CharField(required=False, allow_blank=True, allow_null=True, help_text='附件URL')
 
 
 class PersonalPublishSerializer(serializers.Serializer):
@@ -188,9 +187,8 @@ class PersonalPublishSerializer(serializers.Serializer):
         help_text='技能列表，每个技能包含skill_name和skill_degree'
     )
     project_experience = serializers.CharField(required=False, allow_blank=True, help_text='项目经验')
-    experience_file = serializers.CharField(required=False, allow_blank=True, allow_null=True, help_text='经验文件URL')
+    experience_link = serializers.CharField(required=False, allow_blank=True, allow_null=True, help_text='经验链接URL')
     habit_tag = serializers.CharField(required=False, allow_blank=True, help_text='习惯标签（字符串，如"人工智能"）')
     spend_time = serializers.CharField(help_text='可投入时间')
     expect_worktype = serializers.CharField(help_text='期望工作类型: research/competition/innovation')
     filter = serializers.CharField(help_text='筛选条件: all/cross/local')
-    certification = serializers.CharField(required=False, allow_blank=True, allow_null=True, help_text='证书URL')

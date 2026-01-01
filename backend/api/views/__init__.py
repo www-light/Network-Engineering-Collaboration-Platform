@@ -12,6 +12,7 @@ from .conversation import (
 )
 from .tag import tags
 from .project import list_projects, get_project_detail, publish_research, publish_competition, publish_personal
+from .attachment import upload_attachment, download_attachment
 
 __all__ = [
     'health_check',
@@ -34,4 +35,6 @@ __all__ = [
     'publish_research',
     'publish_competition',
     'publish_personal',
+    'upload_attachment',
+    'download_attachment',
 ]

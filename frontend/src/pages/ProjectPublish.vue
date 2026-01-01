@@ -214,22 +214,23 @@
         <!-- 附件上传 -->
         <el-form-item label="附件">
           <el-upload
-            :action="uploadUrl"
-            :headers="uploadHeaders"
-            :on-success="handleUploadSuccess"
-            :on-error="handleUploadError"
+            :auto-upload="false"
             :file-list="fileList"
+            :on-change="handleFileChange"
+            :on-remove="handleFileRemove"
+            :limit="10"
           >
             <el-button type="primary">
               <el-icon><Upload /></el-icon>
-              上传附件
+              选择附件
             </el-button>
             <template #tip>
               <div class="el-upload__tip">
-                支持PDF、Word等格式文件
+                支持PDF、Word等格式文件，最多上传10个文件
                 <template v-if="form.post_type === 'research'">，上传项目立项书或往期成果</template>
                 <template v-else-if="form.post_type === 'competition'">，上传历年获奖案例和备赛资料</template>
                 <template v-else-if="form.post_type === 'personal'">，上传个人简历或技能证书</template>
+                <br>注：附件将在项目发布成功后自动上传
               </div>
             </template>
           </el-upload>
@@ -257,7 +258,7 @@ import { useUserStore } from '@/store/user'
 import { Plus, Upload, Check, Refresh, Delete } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getTags, createTag } from '@/api/tag'
-import { publishResearch, publishCompetition, publishPersonal } from '@/api/project'
+import { publishResearch, publishCompetition, publishPersonal, uploadAttachment } from '@/api/project'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -265,6 +266,7 @@ const userStore = useUserStore()
 const formRef = ref(null)
 const loading = ref(false)
 const fileList = ref([])
+const pendingFiles = ref([]) // 待上传的文件列表
 const tagsList = ref([])
 const tagsLoading = ref(false)
 
@@ -295,6 +297,8 @@ const form = reactive({
   expect_worktype: '',
   filter: ''
 })
+
+// 移除appendix字段，不再使用
 
 const rules = {
   research_name: [{ required: true, message: '请输入项目名称', trigger: 'blur' }],
@@ -342,7 +346,8 @@ const rules = {
   filter: [{ required: true, message: '请选择项目筛选条件', trigger: 'blur' }],
 }
 
-const uploadUrl = computed(() => '/api/')
+// 附件上传不再使用el-upload的自动上传，改为手动控制
+const uploadUrl = computed(() => '/api/attachments/upload')
 const uploadHeaders = computed(() => ({
   Authorization: `Bearer ${userStore.token}`
 }))
@@ -383,15 +388,16 @@ const validateSkillName = (index) => {
   }
 }
 
-const handleUploadSuccess = (response) => {
-  if (response.code === 200 && response.data) {
-    form.appendix = response.data.appendix || ''
-    ElMessage.success('上传成功')
-  }
+// 文件选择变化
+const handleFileChange = (file, fileListRef) => {
+  fileList.value = fileListRef
+  pendingFiles.value = fileListRef.map(item => item.raw).filter(Boolean)
 }
 
-const handleUploadError = () => {
-  ElMessage.error('上传失败')
+// 文件移除
+const handleFileRemove = (file, fileListRef) => {
+  fileList.value = fileListRef
+  pendingFiles.value = fileListRef.map(item => item.raw).filter(Boolean)
 }
 
 // 加载标签列表
@@ -476,8 +482,7 @@ const handleSubmit = async () => {
             deadline: dateToTimestamp(form.deadline),
             team_require: form.team_require,
             guide_way: form.guide_way,
-            reward: form.reward || null,
-            appendix: form.appendix || null
+            reward: form.reward || null
           }
           
           response = await publishCompetition(submitData)
@@ -501,12 +506,11 @@ const handleSubmit = async () => {
             major: form.major,
             skills: skillsData,
             project_experience: form.project_experience || '',
-            experience_file: form.experience_link || null,
+            experience_link: form.experience_link || null,
             habit_tag: tagsToString(form.habit_tag || []),
             spend_time: form.spend_time,
             expect_worktype: form.expect_worktype,
-            filter: form.filter,
-            certification: form.appendix || null
+            filter: form.filter
           }
           
           response = await publishPersonal(submitData)
@@ -519,7 +523,24 @@ const handleSubmit = async () => {
         // 处理响应：检查 code 和 data.post_id
         if (response && response.code === 200) {
           if (response.data && response.data.post_id) {
-            ElMessage.success(response.msg || '发布成功')
+            const postId = response.data.post_id
+            
+            // 如果有待上传的附件，先上传附件
+            if (pendingFiles.value && pendingFiles.value.length > 0) {
+              try {
+                const uploadPromises = pendingFiles.value.map(file => 
+                  uploadAttachment(postId, file)
+                )
+                await Promise.all(uploadPromises)
+                ElMessage.success('项目发布成功，附件上传完成')
+              } catch (uploadError) {
+                console.error('附件上传失败:', uploadError)
+                ElMessage.warning('项目发布成功，但部分附件上传失败，请稍后重试上传')
+              }
+            } else {
+              ElMessage.success(response.msg || '发布成功')
+            }
+            
             router.push('/projects')
           } else {
             ElMessage.error('发布失败：未返回项目ID')
@@ -623,7 +644,7 @@ onMounted(() => {
 const handleReset = () => {
   formRef.value?.resetFields()
   fileList.value = []
-  form.appendix = ''
+  pendingFiles.value = []
   form.habit_tag = []
   form.skills = []
 }
