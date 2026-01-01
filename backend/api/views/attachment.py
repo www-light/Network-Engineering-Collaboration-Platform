@@ -68,7 +68,7 @@ def upload_attachment(request):
             "formatted_size": "1.00KB",
             "mime_type": "application/pdf",
             "file_type": 1,
-            "download_url": "/api/files/{file_id}/download",
+            "download_url": "/api/attachments/{file_id}/download",
             "storage_path": "uploads/..."
         }
     }
@@ -206,7 +206,7 @@ def upload_attachment(request):
         )
         
         # 生成下载URL（使用attachment的ID）
-        download_url = f"/api/files/{attachment.id}/download"
+        download_url = f"/api/attachments/{attachment.id}/download"
         
         # 更新download_url
         attachment.download_url = download_url
@@ -242,7 +242,7 @@ def upload_attachment(request):
 def download_attachment(request, file_id):
     """下载附件接口
     
-    GET /files/<file_id>/download
+    GET /attachments/<file_id>/download
     
     返回: 文件流
     """

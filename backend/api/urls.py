@@ -41,6 +41,6 @@ urlpatterns = [
     
     # 附件接口
     path('attachments/upload', upload_attachment, name='upload_attachment'),   # 上传附件
-    path('files/<uuid:file_id>/download', download_attachment, name='download_attachment'),   # 下载附件
+    path('attachments/<uuid:file_id>/download', download_attachment, name='download_attachment'),   # 下载附件
 ]
 
