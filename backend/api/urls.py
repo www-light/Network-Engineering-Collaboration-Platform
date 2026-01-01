@@ -4,14 +4,31 @@ from .views import (
     create_conversation, list_conversations, close_conversation,
     send_message, list_messages
 )
+from .views.cooperation import (
+    apply_cooperation, approve_application, reject_application,reject_invitation,
+    cancel_apply, invite_student, cancel_invite, agree_invite,
+    check_unfinished
+)
 
 urlpatterns = [
+    # 注册登录
     path('health', health_check, name='health_check'),
     path('auth/register', register, name='register'),
     path('auth/login', login, name='login'),
     path('post/like', like, name='post_like'),
     path('post/favorite', favorite, name='post_favorite'),
     path('post/comment', comment, name='post_comment'),
+    
+    # 合作流程
+    path('cooperation/apply', apply_cooperation, name='apply_cooperation'),
+    path('cooperation/approve', approve_application, name='approve_application'),
+    path('cooperation/apply/reject', reject_application, name='reject_application'),
+    path('cooperation/invite/reject', reject_invitation, name='reject_invitation'),
+    path('cooperation/apply/cancel', cancel_apply, name='cancel_apply'),
+    path('cooperation/invite', invite_student, name='invite_student'),
+    path('cooperation/invite/cancel', cancel_invite, name='cancel_invite'),
+    path('cooperation/agree', agree_invite, name='agree_invite'),
+    path('cooperation/check-unfinished', check_unfinished, name='check_unfinished'),
     
     # 站内私信
     path('conversations', create_conversation, name='create_conversation'),

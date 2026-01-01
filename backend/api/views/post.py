@@ -7,7 +7,7 @@ from rest_framework import status
 from ..models.post import PostEntity
 from ..models.user import User
 from ..models.interaction import Like, Favorite, Comment
-from ..utils.auth import login_required
+from ..utils.auth import login_required, teacher_required, student_required
 
 def ok():
     return Response({"code": 200}, status=status.HTTP_200_OK)
