@@ -90,8 +90,6 @@ class Comment(models.Model):
         db_table = 'Comment'
         verbose_name = '评论'
         verbose_name_plural = '评论'
-        # 移除 unique_together 约束，允许多条评论
-        # 移除 unique_together 约束，允许多条评论
         ordering = ['-created_at']
     
     def __str__(self):

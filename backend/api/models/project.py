@@ -54,6 +54,7 @@ class CompetitionProject(models.Model):
         db_column='teacher_id',
         verbose_name='教师ID'
     )
+    
     competition_type = models.SmallIntegerField(
         choices=[
             (0, 'IETP'),
@@ -107,8 +108,7 @@ class SkillInformation(models.Model):
     habit_tag = models.CharField(max_length=255, verbose_name='习惯标签')
     spend_time = models.CharField(max_length=255, verbose_name='可投入时间')
     expect_worktype = models.CharField(max_length=255, verbose_name='期望工作类型')
-    filter = models.CharField(max_length=255, verbose_name='筛选条件')
-    
+    filter = models.CharField(max_length=255, verbose_name='筛选条件'),
     class Meta:
         db_table = 'Skill_information'
         verbose_name = '学生技能发布'
