@@ -6,15 +6,51 @@
   >
     <div class="card-content">
       <div class="card-header">
-        <el-tag :type="getTagType(project.post_type)" size="small" effect="light">
-          {{ getTypeName(project.post_type) }}
-        </el-tag>
-        <span class="title">{{ project.title }}</span>
+        <div class="header-left">
+          <el-tag :type="getTagType(project.post_type)" size="small" effect="light">
+            {{ getTypeName(project.post_type) }}
+          </el-tag>
+          <span class="title">{{ project.title }}</span>
+        </div>
+        <div class="header-right">
+          <!-- 科研项目：显示技术栈 -->
+          <div v-if="project.post_type === 'research' && project.tech_stack && project.tech_stack.length > 0" class="header-tags">
+            <el-tag
+              v-for="(stack, index) in project.tech_stack.slice(0, 2)"
+              :key="index"
+              size="small"
+              type="success"
+              effect="plain"
+              style="margin-left: 4px;"
+            >
+              {{ stack }}
+            </el-tag>
+            <span v-if="project.tech_stack.length > 2" class="more-tags">+{{ project.tech_stack.length - 2 }}</span>
+          </div>
+          <!-- 个人技能：显示技能和熟练度 -->
+          <div v-if="project.post_type === 'personal' && project.skills && project.skills.length > 0" class="header-tags">
+            <el-tag
+              v-for="(skill, index) in project.skills.slice(0, 2)"
+              :key="'skill-' + index"
+              size="small"
+              type="primary"
+              effect="plain"
+              style="margin-left: 4px;"
+            >
+              {{ skill.skill_name }}({{ skill.skill_degree === 'skillful' ? '熟练' : '了解' }})
+            </el-tag>
+          </div>
+        </div>
       </div>
       <div class="card-info">
         <div class="teacher">
           <el-icon><User /></el-icon>
           <span>{{ project.teacher_name }}</span>
+        </div>
+        <!-- 附件信息 -->
+        <div v-if="project.attachments && project.attachments.length > 0" class="attachments-info">
+          <el-icon><Document /></el-icon>
+          <span>{{ project.attachments.length }}个附件</span>
         </div>
       </div>
       <div class="card-footer">
@@ -39,7 +75,7 @@
 </template>
 
 <script setup>
-import { User, Star, Collection, ChatLineRound } from '@element-plus/icons-vue'
+import { User, Star, Collection, ChatLineRound, Document } from '@element-plus/icons-vue'
 
 defineProps({
   project: {
@@ -102,9 +138,18 @@ const formatTime = (time) => {
 
 .card-header {
   display: flex;
-  align-items: center;
+  justify-content: space-between;
+  align-items: flex-start;
   gap: 8px;
   margin-bottom: 12px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
 }
 
 .title {
@@ -115,6 +160,19 @@ const formatTime = (time) => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.header-tags {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
 .card-info {
@@ -129,6 +187,22 @@ const formatTime = (time) => {
   font-size: 14px;
   margin-bottom: 8px;
   margin-left: 16px;
+}
+
+.more-tags {
+  color: #909399;
+  font-size: 12px;
+  margin-left: 4px;
+}
+
+.attachments-info {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #606266;
+  font-size: 12px;
+  margin-left: 16px;
+  margin-bottom: 8px;
 }
 
 .card-footer {

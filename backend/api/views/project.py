@@ -122,6 +122,60 @@ def list_projects(request):
             ).select_related('student', 'post')
             skill_dict = {s.post_id: s for s in skill_list}
         
+        # 批量查询方向关联（用于个人技能和科研项目）
+        post_directions_dict = {}
+        post_directions_list = PostDirection.objects.filter(
+            post_id__in=post_ids
+        ).select_related('direction', 'post')
+        for pd in post_directions_list:
+            if pd.post_id not in post_directions_dict:
+                post_directions_dict[pd.post_id] = []
+            post_directions_dict[pd.post_id].append(pd.direction.direction_name)
+        
+        # 批量查询技术栈关联（用于科研项目）
+        post_stacks_dict = {}
+        post_stacks_list = PostStack.objects.filter(
+            post_id__in=post_ids
+        ).select_related('stack', 'post')
+        for ps in post_stacks_list:
+            if ps.post_id not in post_stacks_dict:
+                post_stacks_dict[ps.post_id] = []
+            post_stacks_dict[ps.post_id].append(ps.stack.tech_stack)
+        
+        # 批量查询技能关联（用于个人技能）
+        student_skills_dict = {}
+        student_skills_list = StudentSkill.objects.filter(
+            post_id__in=post_ids
+        ).select_related('skill', 'post')
+        for ss in student_skills_list:
+            if ss.post_id not in student_skills_dict:
+                student_skills_dict[ss.post_id] = []
+            student_skills_dict[ss.post_id].append({
+                'skill_name': ss.skill.skill_name,
+                'proficiency': ss.proficiency,  # 0=skillful, 1=known
+                'skill_degree': 'skillful' if ss.proficiency == 0 else 'known'
+            })
+        
+        # 批量查询附件
+        attachments_dict = {}
+        attachments_list = PostAttachment.objects.filter(
+            post_id__in=post_ids,
+            is_active=True
+        ).order_by('-created_at')
+        for att in attachments_list:
+            if att.post_id not in attachments_dict:
+                attachments_dict[att.post_id] = []
+            attachments_dict[att.post_id].append({
+                'attachment_id': str(att.id),
+                'original_filename': att.original_filename,
+                'file_size': att.file_size,
+                'formatted_size': att.formatted_size,
+                'mime_type': att.mime_type,
+                'file_type': att.file_type,
+                'download_url': att.download_url,
+                'created_at': att.created_at.isoformat() if att.created_at else None
+            })
+        
         result = []
         
         for post in posts:
@@ -137,6 +191,23 @@ def list_projects(request):
                 post_type_str = 'research'
                 title = research.research_name
                 publisher_name = research.teacher.teacher_name
+                
+                # 获取技术栈
+                tech_stacks = post_stacks_dict.get(post.post_id, [])
+                
+                # 构建项目数据
+                project_data = {
+                    'post_id': post.post_id,
+                    'post_type': post_type_str,
+                    'title': title,
+                    'teacher_name': publisher_name,
+                    'like_num': post.like_num,
+                    'favorite_num': post.favorite_num,
+                    'comment_num': post.comment_num,
+                    'create_time': post.create_time.isoformat() if post.create_time else None,
+                    'tech_stack': tech_stacks,  # 技术栈列表
+                    'attachments': attachments_dict.get(post.post_id, [])  # 附件列表
+                }
             
             elif post.post_type == 2:  # 竞赛项目
                 competition = competition_dict.get(post.post_id)
@@ -145,29 +216,53 @@ def list_projects(request):
                 post_type_str = 'competition'
                 title = competition.competition_name
                 publisher_name = competition.teacher.teacher_name
+                
+                # 构建项目数据
+                project_data = {
+                    'post_id': post.post_id,
+                    'post_type': post_type_str,
+                    'title': title,
+                    'teacher_name': publisher_name,
+                    'like_num': post.like_num,
+                    'favorite_num': post.favorite_num,
+                    'comment_num': post.comment_num,
+                    'create_time': post.create_time.isoformat() if post.create_time else None,
+                    'attachments': attachments_dict.get(post.post_id, [])  # 附件列表
+                }
             
             elif post.post_type == 3:  # 个人技能
                 skill = skill_dict.get(post.post_id)
                 if not skill:
                     continue
                 post_type_str = 'personal'
-                title = skill.major  # 个人技能使用专业方向作为标题
+                # 个人技能使用专业方向作为标题，如果有方向则使用第一个，否则使用学生姓名
+                directions = post_directions_dict.get(post.post_id, [])
+                title = directions[0] if directions else skill.student.student_name
                 publisher_name = skill.student.student_name
+                
+                # 获取技能列表
+                skills = student_skills_dict.get(post.post_id, [])
+                
+                # 构建项目数据
+                project_data = {
+                    'post_id': post.post_id,
+                    'post_type': post_type_str,
+                    'title': title,
+                    'teacher_name': publisher_name,  # 对于个人项目，这里实际是学生姓名
+                    'like_num': post.like_num,
+                    'favorite_num': post.favorite_num,
+                    'comment_num': post.comment_num,
+                    'create_time': post.create_time.isoformat() if post.create_time else None,
+                    'major': directions,  # 专业方向列表
+                    'skills': skills,  # 技能列表（包含技能名和熟练度）
+                    'attachments': attachments_dict.get(post.post_id, [])  # 附件列表
+                }
             
             # 如果无法获取项目信息，跳过
             if not title or not publisher_name:
                 continue
             
-            result.append({
-                'post_id': post.post_id,
-                'post_type': post_type_str,
-                'title': title,
-                'teacher_name': publisher_name,  # 对于个人项目，这里实际是学生姓名
-                'like_num': post.like_num,
-                'favorite_num': post.favorite_num,
-                'comment_num': post.comment_num,
-                'create_time': post.create_time.isoformat() if post.create_time else None
-            })
+            result.append(project_data)
         
         return Response(
             {

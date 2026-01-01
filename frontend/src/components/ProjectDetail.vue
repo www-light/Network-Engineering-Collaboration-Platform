@@ -45,7 +45,7 @@
               <el-descriptions-item label="开始时间">
                 {{ formatDate(detail.starttime) }}
               </el-descriptions-item>
-              <el-descriptions-item label="结束时间">
+              <el-descriptions-item label="结束时间" :span="2">
                 {{ formatDate(detail.endtime) }}
               </el-descriptions-item>
               <el-descriptions-item label="预期成果" :span="2">
@@ -54,21 +54,31 @@
               <el-descriptions-item label="联系方式" :span="2">
                 {{ detail.contact }}
               </el-descriptions-item>
-              <el-descriptions-item v-if="detail.appendix" label="附件" :span="2">
-                <el-link
-                  type="primary"
-                  @click="handleDownload(detail.appendix)"
-                >
-                  <el-icon><Download /></el-icon>
-                  下载附件
-                </el-link>
+              <el-descriptions-item v-if="detail.attachments && detail.attachments.length > 0" label="附件" :span="2">
+                <div class="attachments-list">
+                  <div
+                    v-for="attachment in detail.attachments"
+                    :key="attachment.attachment_id"
+                    class="attachment-item"
+                  >
+                    <el-link
+                      type="primary"
+                      :href="getAttachmentUrl(attachment.download_url)"
+                      @click.prevent="handleDownloadAttachment(attachment)"
+                    >
+                      <el-icon><Download /></el-icon>
+                      {{ attachment.original_filename }}
+                    </el-link>
+                    <span class="attachment-size">({{ attachment.formatted_size || formatFileSize(attachment.file_size) }})</span>
+                  </div>
+                </div>
               </el-descriptions-item>
             </template>
             <template v-else-if="detail.post_type === 'competition'">
               <el-descriptions-item label="竞赛类型">
                 {{ getCompetitionTypeText(detail.competition_type) }}
               </el-descriptions-item>
-              <el-descriptions-item label="截止时间">
+              <el-descriptions-item label="截止时间" :span="2">
                 {{ formatDate(detail.deadline) }}
               </el-descriptions-item>
               <el-descriptions-item label="团队要求" :span="2">
@@ -80,32 +90,51 @@
               <el-descriptions-item label="奖励" :span="2">
                 {{ detail.reward }}
               </el-descriptions-item>
-              <el-descriptions-item v-if="detail.appendix" label="附件" :span="2">
-                <el-link
-                  type="primary"
-                  @click="handleDownload(detail.appendix)"
-                >
-                  <el-icon><Download /></el-icon>
-                  下载附件
-                </el-link>
+              <el-descriptions-item v-if="detail.attachments && detail.attachments.length > 0" label="附件" :span="2">
+                <div class="attachments-list">
+                  <div
+                    v-for="attachment in detail.attachments"
+                    :key="attachment.attachment_id"
+                    class="attachment-item"
+                  >
+                    <el-link
+                      type="primary"
+                      :href="getAttachmentUrl(attachment.download_url)"
+                      @click.prevent="handleDownloadAttachment(attachment)"
+                    >
+                      <el-icon><Download /></el-icon>
+                      {{ attachment.original_filename }}
+                    </el-link>
+                    <span class="attachment-size">({{ attachment.formatted_size || formatFileSize(attachment.file_size) }})</span>
+                  </div>
+                </div>
               </el-descriptions-item>
             </template>
             <template v-else-if="detail.post_type === 'personal'">
-              <el-descriptions-item label="专业">
-                {{ detail.major }}
+              <el-descriptions-item label="专业方向">
+                {{ formatMajor(detail.major) }}
               </el-descriptions-item>
-              <el-descriptions-item label="技能">
-                {{ detail.skill }}
-              </el-descriptions-item>
-              <el-descriptions-item label="技能程度">
-                {{ getSkillDegreeText(detail.skill_degree) }}
+              <el-descriptions-item label="技能" :span="2">
+                <div class="skills-list">
+                  <el-tag
+                    v-for="(skill, index) in (detail.skills || [])"
+                    :key="'skill-' + index"
+                    type="primary"
+                    size="small"
+                    style="margin-right: 8px; margin-bottom: 4px;"
+                  >
+                    {{ skill.skill_name }} ({{ getSkillDegreeText(skill.skill_degree) }})
+                  </el-tag>
+                  <span v-if="!detail.skills || detail.skills.length === 0" class="no-tags">暂无技能</span>
+                </div>
               </el-descriptions-item>
               <el-descriptions-item label="可投入时间" :span="2">
                 {{ detail.spend_time }}
               </el-descriptions-item>
               <!-- 项目经验独占一行，在可投入时间下面 -->
               <el-descriptions-item label="项目经验" :span="2">
-                {{ detail.project_experience }}
+                <span v-if="detail.project_experience" class="project-experience-text">{{ detail.project_experience }}</span>
+                <span v-else class="no-experience">暂无项目经验</span>
               </el-descriptions-item>
               <el-descriptions-item v-if="detail.experience_link" label="经验链接" :span="2">
                 <el-link :href="detail.experience_link" target="_blank" type="primary">
@@ -132,8 +161,24 @@
               <el-descriptions-item label="筛选条件" :span="2">
                 {{ getFilterText(detail.filter) }}
               </el-descriptions-item>
-              <el-descriptions-item v-if="detail.certification" label="证书" :span="2">
-                {{ detail.certification }}
+              <el-descriptions-item v-if="detail.attachments && detail.attachments.length > 0" label="附件" :span="2">
+                <div class="attachments-list">
+                  <div
+                    v-for="attachment in detail.attachments"
+                    :key="attachment.attachment_id"
+                    class="attachment-item"
+                  >
+                    <el-link
+                      type="primary"
+                      :href="getAttachmentUrl(attachment.download_url)"
+                      @click.prevent="handleDownloadAttachment(attachment)"
+                    >
+                      <el-icon><Download /></el-icon>
+                      {{ attachment.original_filename }}
+                    </el-link>
+                    <span class="attachment-size">({{ attachment.formatted_size || formatFileSize(attachment.file_size) }})</span>
+                  </div>
+                </div>
               </el-descriptions-item>
             </template>
           </el-descriptions>
@@ -373,6 +418,50 @@ const handleDownload = async (url) => {
   } catch (error) {
     ElMessage.error('下载失败')
   }
+}
+
+const getAttachmentUrl = (downloadUrl) => {
+  if (!downloadUrl) return '#'
+  // 如果URL已经包含/api，直接使用；否则添加/api前缀
+  if (downloadUrl.startsWith('/api')) {
+    return downloadUrl
+  } else if (downloadUrl.startsWith('/')) {
+    return '/api' + downloadUrl
+  } else {
+    return '/api/' + downloadUrl
+  }
+}
+
+const handleDownloadAttachment = async (attachment) => {
+  if (!attachment.download_url) {
+    ElMessage.error('附件下载链接不存在')
+    return
+  }
+  
+  try {
+    // 直接打开下载链接
+    const url = getAttachmentUrl(attachment.download_url)
+    window.open(url, '_blank')
+  } catch (error) {
+    ElMessage.error('下载失败')
+    console.error(error)
+  }
+}
+
+const formatFileSize = (bytes) => {
+  if (!bytes || bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return (bytes / Math.pow(k, i)).toFixed(2) + ' ' + sizes[i]
+}
+
+const formatMajor = (major) => {
+  if (!major) return ''
+  if (Array.isArray(major)) {
+    return major.length > 0 ? major.join('、') : ''
+  }
+  return major
 }
 
 const handleLike = async () => {
@@ -644,5 +733,37 @@ const loadComments = async () => {
 .no-tags {
   color: #909399;
   font-size: 14px;
+}
+
+.skills-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.attachments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.attachment-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.attachment-size {
+  color: #909399;
+  font-size: 12px;
+}
+
+.project-experience-text {
+  color: #606266;
+}
+
+.no-experience {
+  color: #909399;
 }
 </style>
