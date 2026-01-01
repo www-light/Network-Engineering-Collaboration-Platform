@@ -20,8 +20,8 @@ def _type_folder(file_type: int) -> str:
     mapping = {
         1: 'research',   # 科研材料
         2: 'competition',  # 大创或竞赛
-        3: 'project',    # 个人项目经历
-        4: 'resume',     # 个人证书简历
+        3: 'resume',     # 个人证书简历
+        4: '其他',    # 其他
     }
     return mapping.get(int(file_type), 'others')
 
