@@ -3,6 +3,7 @@
 from .health import health_check
 from .auth import register, login
 from .post import like, favorite, comment
+from .attachment import upload_attachment, download_attachment
 from .conversation import (
     create_conversation,
     list_conversations,
@@ -23,4 +24,6 @@ __all__ = [
     'close_conversation',
     'send_message',
     'list_messages',
+    'upload_attachment',
+    'download_attachment',
 ]
