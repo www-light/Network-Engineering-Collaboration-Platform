@@ -8,8 +8,14 @@ from .views import (
     publish_research, publish_competition, publish_personal,
     upload_attachment, download_attachment
 )
+from .views.cooperation import (
+    apply_cooperation, approve_application, reject_application,reject_invitation,
+    cancel_apply, invite_student, cancel_invite, agree_invite,
+    check_unfinished
+)
 
 urlpatterns = [
+    # 注册登录
     path('health', health_check, name='health_check'),
     path('auth/register', register, name='register'),
     path('auth/login', login, name='login'),
@@ -19,6 +25,21 @@ urlpatterns = [
     path('post/unfavorite', unfavorite, name='post_unfavorite'),
     path('post/comment', comment, name='post_comment'),
     path('post/comment/<int:post_id>', list_comments, name='list_comments'),
+
+    # 附件上传与下载（新的下载路径并保留旧路径兼容）
+    path('attachments/upload', upload_attachment, name='upload_attachment'),
+    path('attachments/<uuid:file_id>/download', download_attachment, name='download_attachment'),
+    
+    # 合作流程
+    path('cooperation/apply', apply_cooperation, name='apply_cooperation'),
+    path('cooperation/approve', approve_application, name='approve_application'),
+    path('cooperation/apply/reject', reject_application, name='reject_application'),
+    path('cooperation/invite/reject', reject_invitation, name='reject_invitation'),
+    path('cooperation/apply/cancel', cancel_apply, name='cancel_apply'),
+    path('cooperation/invite', invite_student, name='invite_student'),
+    path('cooperation/invite/cancel', cancel_invite, name='cancel_invite'),
+    path('cooperation/agree', agree_invite, name='agree_invite'),
+    path('cooperation/check-unfinished', check_unfinished, name='check_unfinished'),
     
     # 站内私信
     path('conversations', create_conversation, name='create_conversation'),
