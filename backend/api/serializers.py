@@ -63,7 +63,7 @@ class RegisterSerializer(serializers.Serializer):
                 raise serializers.ValidationError({"account": "该教工号已被注册"})
         
         # 创建 User
-        user = User(identity=identity)
+        user = User(identity=identity, token='')  # 注册时token为空，登录时生成
         user.set_password(password)
         user.save()
         
@@ -148,3 +148,47 @@ class LoginResponseSerializer(serializers.Serializer):
     identity = serializers.IntegerField()
     token = serializers.CharField()
 
+
+class ResearchPublishSerializer(serializers.Serializer):
+    """科研项目发布序列化器"""
+    post_id = serializers.IntegerField(required=False, allow_null=True, help_text='项目ID（可选，用于更新）')
+    teacher_id = serializers.IntegerField(help_text='教师ID')
+    research_name = serializers.CharField(help_text='科研项目名称')
+    research_direction = serializers.CharField(help_text='研究方向')
+    tech_stack = serializers.CharField(help_text='技术栈')
+    recruit_quantity = serializers.IntegerField(help_text='招募数量')
+    starttime = serializers.IntegerField(help_text='开始时间（Unix时间戳，毫秒）')
+    endtime = serializers.IntegerField(help_text='结束时间（Unix时间戳，毫秒）')
+    outcome = serializers.CharField(help_text='预期成果')
+    contact = serializers.CharField(help_text='联系方式')
+
+
+class CompetitionPublishSerializer(serializers.Serializer):
+    """竞赛项目发布序列化器"""
+    post_id = serializers.IntegerField(required=False, allow_null=True, help_text='项目ID（可选，用于更新）')
+    teacher_id = serializers.IntegerField(help_text='教师ID')
+    competition_type = serializers.CharField(help_text='竞赛类型: IETP/AC/CC')
+    competition_name = serializers.CharField(help_text='竞赛名称')
+    deadline = serializers.IntegerField(help_text='截止时间（Unix时间戳，毫秒）')
+    team_require = serializers.CharField(help_text='团队要求')
+    guide_way = serializers.CharField(help_text='指导方式: online/offline')
+    reward = serializers.CharField(required=False, allow_blank=True, allow_null=True, help_text='奖励')
+
+
+class PersonalPublishSerializer(serializers.Serializer):
+    """个人技能发布序列化器"""
+    post_id = serializers.IntegerField(required=False, allow_null=True, help_text='项目ID（可选，用于更新）')
+    student_id = serializers.IntegerField(help_text='学生ID')
+    major = serializers.CharField(help_text='专业')
+    skills = serializers.ListField(
+        child=serializers.DictField(
+            child=serializers.CharField()
+        ),
+        help_text='技能列表，每个技能包含skill_name和skill_degree'
+    )
+    project_experience = serializers.CharField(required=False, allow_blank=True, help_text='项目经验')
+    experience_link = serializers.CharField(required=False, allow_blank=True, allow_null=True, help_text='经验链接URL')
+    habit_tag = serializers.CharField(required=False, allow_blank=True, help_text='习惯标签（字符串，如"人工智能"）')
+    spend_time = serializers.CharField(help_text='可投入时间')
+    expect_worktype = serializers.CharField(help_text='期望工作类型: research/competition/innovation')
+    filter = serializers.CharField(help_text='筛选条件: all/cross/local')
