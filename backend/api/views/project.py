@@ -77,8 +77,28 @@ def list_projects(request):
             'personal': 3
         }
         
+        # 获取当前用户（如果已登录）
+        current_user = get_user_from_token(request)
+        current_user_identity = None
+        if current_user:
+            current_user_identity = current_user.identity  # 0=学生, 1=教师
+        
         # 构建查询
         posts_query = PostEntity.objects.all().order_by('-create_time')
+        
+        # 根据可见权限过滤
+        # visibility: 0=公开（所有人可见）, 1=仅教师可见, 2=仅学生可见
+        if current_user_identity is not None:
+            # 如果用户已登录，根据身份和可见权限过滤
+            if current_user_identity == 0:  # 学生
+                # 学生可以看到：公开(0)和仅学生可见(2)的项目
+                posts_query = posts_query.filter(visibility__in=[0, 2])
+            elif current_user_identity == 1:  # 教师
+                # 教师可以看到：公开(0)和仅教师可见(1)的项目
+                posts_query = posts_query.filter(visibility__in=[0, 1])
+        else:
+            # 未登录用户只能看到公开的项目
+            posts_query = posts_query.filter(visibility=0)
         
         # 如果有类型筛选，添加过滤条件
         if post_type_filter and post_type_filter in post_type_map:
@@ -771,6 +791,12 @@ def publish_research(request):
                         existing_research.contact = validated_data['contact']
                         existing_research.save()
                         
+                        # 更新可见权限
+                        visibility = validated_data.get('visibility', post.visibility)
+                        if visibility in [0, 1, 2]:
+                            post.visibility = visibility
+                            post.save(update_fields=['visibility'])
+                        
                         # 处理方向和技术栈关联
                         sync_post_directions(post, validated_data.get('research_direction', ''))
                         sync_post_stacks(post, validated_data.get('tech_stack', ''))
@@ -790,6 +816,11 @@ def publish_research(request):
                     # post不存在，创建新的
                     pass
             
+            # 获取可见权限，默认为0（公开）
+            visibility = validated_data.get('visibility', 0)
+            if visibility not in [0, 1, 2]:
+                visibility = 0  # 如果值无效，默认公开
+            
             # 创建新的PostEntity
             post = PostEntity.objects.create(
                 post_type=1,  # 科研项目
@@ -797,7 +828,7 @@ def publish_research(request):
                 like_num=0,
                 favorite_num=0,
                 comment_num=0,
-                visibility=0  # 默认公开
+                visibility=visibility
             )
             
             # 创建ResearchProject
@@ -952,6 +983,13 @@ def publish_competition(request):
                         existing_competition.guide_way = guide_way_int
                         existing_competition.reward = validated_data.get('reward') or None
                         existing_competition.save()
+                        
+                        # 更新可见权限
+                        visibility = validated_data.get('visibility', post.visibility)
+                        if visibility in [0, 1, 2]:
+                            post.visibility = visibility
+                            post.save(update_fields=['visibility'])
+                        
                         return Response(
                             {
                                 'code': 200,
@@ -967,6 +1005,11 @@ def publish_competition(request):
                     # post不存在，创建新的
                     pass
             
+            # 获取可见权限，默认为0（公开）
+            visibility = validated_data.get('visibility', 0)
+            if visibility not in [0, 1, 2]:
+                visibility = 0  # 如果值无效，默认公开
+            
             # 创建新的PostEntity
             post = PostEntity.objects.create(
                 post_type=2,  # 竞赛项目
@@ -974,7 +1017,7 @@ def publish_competition(request):
                 like_num=0,
                 favorite_num=0,
                 comment_num=0,
-                visibility=0  # 默认公开
+                visibility=visibility
             )
             
             # 创建CompetitionProject
@@ -1159,6 +1202,12 @@ def publish_personal(request):
                         existing_skill.filter = filter_str
                         existing_skill.save()
                         
+                        # 更新可见权限
+                        visibility = validated_data.get('visibility', post.visibility)
+                        if visibility in [0, 1, 2]:
+                            post.visibility = visibility
+                            post.save(update_fields=['visibility'])
+                        
                         # 处理方向关联
                         sync_post_directions(post, validated_data.get('major', ''))
                         
@@ -1180,6 +1229,11 @@ def publish_personal(request):
                     # post不存在，创建新的
                     pass
             
+            # 获取可见权限，默认为0（公开）
+            visibility = validated_data.get('visibility', 0)
+            if visibility not in [0, 1, 2]:
+                visibility = 0  # 如果值无效，默认公开
+            
             # 创建新的PostEntity
             post = PostEntity.objects.create(
                 post_type=3,  # 个人技能
@@ -1187,7 +1241,7 @@ def publish_personal(request):
                 like_num=0,
                 favorite_num=0,
                 comment_num=0,
-                visibility=0  # 默认公开
+                visibility=visibility
             )
             
             # 创建SkillInformation

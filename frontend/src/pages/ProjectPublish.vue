@@ -25,6 +25,22 @@
           </el-radio-group>
         </el-form-item>
 
+        <!-- 权限设置 -->
+        <el-form-item label="可见权限" prop="visibility">
+          <div class="visibility-container">
+            <el-radio-group v-model="form.visibility" class="visibility-radio-group">
+              <el-radio :label="0">公开</el-radio>
+              <el-radio :label="1">仅教师可见</el-radio>
+              <el-radio :label="2">仅学生可见</el-radio>
+            </el-radio-group>
+            <div class="visibility-tip">
+              <span v-if="form.visibility === 0">所有用户的项目列表都会显示该项目</span>
+              <span v-else-if="form.visibility === 1">只有教师的项目列表会显示该项目</span>
+              <span v-else-if="form.visibility === 2">只有学生的项目列表会显示该项目</span>
+            </div>
+          </div>
+        </el-form-item>
+
         <!-- 科研项目表单 -->
         <template v-if="form.post_type === 'research'">
           <el-form-item label="项目名称" prop="research_name">
@@ -272,6 +288,7 @@ const tagsLoading = ref(false)
 
 const form = reactive({
   post_type: userStore.isStudent ? 'personal' : 'research',
+  visibility: 0, // 默认公开
   research_name: '',
   research_direction: '',
   tech_stack: '',
@@ -354,7 +371,7 @@ const uploadHeaders = computed(() => ({
 
 const handleTypeChange = () => {
   Object.keys(form).forEach(key => {
-    if (key !== 'post_type') {
+    if (key !== 'post_type' && key !== 'visibility') {
       if (key === 'habit_tag' || key === 'skills') {
         form[key] = []
       } else {
@@ -462,7 +479,8 @@ const handleSubmit = async () => {
             starttime: dateToTimestamp(form.starttime),
             endtime: dateToTimestamp(form.endtime),
             outcome: form.outcome,
-            contact: form.contact
+            contact: form.contact,
+            visibility: form.visibility
           }
           
           response = await publishResearch(submitData)
@@ -482,7 +500,8 @@ const handleSubmit = async () => {
             deadline: dateToTimestamp(form.deadline),
             team_require: form.team_require,
             guide_way: form.guide_way,
-            reward: form.reward || null
+            reward: form.reward || null,
+            visibility: form.visibility
           }
           
           response = await publishCompetition(submitData)
@@ -510,7 +529,8 @@ const handleSubmit = async () => {
             habit_tag: tagsToString(form.habit_tag || []),
             spend_time: form.spend_time,
             expect_worktype: form.expect_worktype,
-            filter: form.filter
+            filter: form.filter,
+            visibility: form.visibility
           }
           
           response = await publishPersonal(submitData)
@@ -715,6 +735,23 @@ const handleReset = () => {
   display: flex;
   align-items: center;
   margin-bottom: 10px;
+}
+
+.visibility-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.visibility-radio-group {
+  display: flex;
+  gap: 24px;
+}
+
+.visibility-tip {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #909399;
+  line-height: 1.5;
 }
 </style>
 
