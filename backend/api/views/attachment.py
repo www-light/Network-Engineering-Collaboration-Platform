@@ -69,7 +69,7 @@ def upload_attachment(request):
             "mime_type": "application/pdf",
             "file_type": 1,
             "download_url": "/api/attachments/{file_id}/download",
-            "storage_path": "uploads/..."
+            "storage_path": "uploads/1/1/uuid.pdf"
         }
     }
     """

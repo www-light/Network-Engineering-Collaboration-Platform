@@ -36,21 +36,51 @@ def list_projects(request):
         "data": {
             "items": [
                 {
+                    // 公共字段（所有项目类型都有）
                     "post_id": 1,
-                    "post_type": "research",  # research/competition/personal
+                    "post_type": "research",  // "research" / "competition" / "personal"
                     "title": "项目名称",
-                    "publisher_name": "发布人姓名",
+                    "teacher_name": "发布人姓名",  // 对于个人项目，这里是学生姓名
                     "like_num": 10,
                     "favorite_num": 5,
                     "comment_num": 3,
-                    "create_time": "2024-01-01T00:00:00Z"
-                },
-                ...
+                    "create_time": "2024-01-01T00:00:00Z",
+                    "attachments": [  // 附件列表
+                        {
+                            "attachment_id": "uuid",
+                            "original_filename": "example.pdf",
+                            "file_size": 1024,
+                            "formatted_size": "1 KB",
+                            "mime_type": "application/pdf",
+                            "file_type": "pdf",
+                            "download_url": "https://...",
+                            "created_at": "2024-01-01T00:00:00Z"
+                        }
+                    ],
+                    
+                    // 科研项目 (research) 特有字段
+                    "tech_stack": ["Python", "TensorFlow"],  // 技术栈列表
+                    
+                    // 个人技能 (personal) 特有字段
+                    "major": ["网络工程", "人工智能"],  // 专业方向列表
+                    "skills": [  // 技能列表
+                        {
+                            "skill_name": "C/C++",
+                            "proficiency": 0,  // 0=skillful, 1=known
+                            "skill_degree": "skillful"  // "skillful" / "known"
+                        },
+                        {
+                            "skill_name": "Python",
+                            "proficiency": 1,
+                            "skill_degree": "known"
+                        }
+                    ]
+                }
             ],
-            "total": 100,  # 总记录数
-            "page": 1,     # 当前页码
-            "page_size": 20,  # 每页数量
-            "total_pages": 5  # 总页数
+            "total": 100,        // 总记录数
+            "page": 1,           // 当前页码
+            "page_size": 20,     // 每页数量
+            "total_pages": 5     // 总页数
         }
     }
     """
@@ -287,7 +317,7 @@ def list_projects(request):
 
 
 @api_view(['GET'])
-def get_project_detail(request, post_id):
+def get_project_detail(request, post_id):  
     """获取项目详情接口
     
     GET /project/detail/<post_id>
@@ -299,47 +329,76 @@ def get_project_detail(request, post_id):
         "code": 200,
         "msg": "获取成功",
         "data": {
+            // 公共字段（所有项目类型都有）
             "post_id": 1,
-            "post_type": "research",  # research/competition/personal
+            "post_type": "research",  // "research" / "competition" / "personal"
             "like_num": 10,
             "favorite_num": 5,
             "comment_num": 3,
-            "is_liked": false,  # 当前用户是否已点赞（需要登录）
-            "is_favorited": false,  # 当前用户是否已收藏（需要登录）
+            "is_liked": false,  // 当前用户是否已点赞（需要登录）
+            "is_favorited": false,  // 当前用户是否已收藏（需要登录）
             "create_time": "2024-01-01T00:00:00Z",
-            # 根据项目类型返回不同的字段
-            # 科研项目 (research):
+            "attachments": [  // 附件列表
+                {
+                    "attachment_id": "uuid",
+                    "original_filename": "example.pdf",
+                    "file_size": 1024,
+                    "formatted_size": "1 KB",
+                    "mime_type": "application/pdf",
+                    "file_type": "pdf",
+                    "download_url": "https://...",
+                    "created_at": "2024-01-01T00:00:00Z"
+                }
+            ],
+            
+            // 科研项目 (research) 特有字段
             "research_name": "项目名称",
-            "research_direction": "研究方向",
-            "tech_stack": "技术栈",
+            "research_direction": "研究方向1, 研究方向2",  // 逗号分隔的字符串
+            "tech_stack": "技术栈1, 技术栈2",  // 逗号分隔的字符串
             "recruit_quantity": 5,
             "starttime": "2024-01-01T00:00:00Z",
             "endtime": "2024-12-31T00:00:00Z",
             "outcome": "预期成果",
             "contact": "联系方式",
-            "appendix": "附件URL",
             "teacher_name": "教师姓名",
             "teacher_id": 1,
-            # 竞赛项目 (competition):
+            
+            // 竞赛项目 (competition) 特有字段
             "competition_name": "竞赛名称",
-            "competition_type": "竞赛类型",
+            "competition_type": "IETP",  // "IETP" / "AC" / "CC"
             "deadline": "2024-12-31T00:00:00Z",
             "team_require": "团队要求",
-            "guide_way": "指导方式",
+            "guide_way": "online",  // "online" / "offline"
             "reward": "奖励",
-            # 个人技能 (personal):
-            "major": "专业",
-            "skill": "技能",
-            "skill_degree": "技能程度",
+            "teacher_name": "教师姓名",
+            "teacher_id": 1,
+            
+            // 个人技能 (personal) 特有字段
+            "major": "专业方向1, 专业方向2",  // 逗号分隔的字符串
+            "skills": [  // 技能列表
+                {
+                    "skill_name": "C/C++",
+                    "skill_degree": "skillful"  // "skillful" / "known"
+                },
+                {
+                    "skill_name": "Python",
+                    "skill_degree": "known"
+                }
+            ],
             "project_experience": "项目经验",
             "experience_link": "经验链接",
             "habit_tag": "习惯标签",
             "spend_time": "可投入时间",
             "expect_worktype": "期望工作类型",
             "filter": "筛选条件",
-            "certification": "证书",
             "student_name": "学生姓名",
-            "student_id": 1
+            "student_id": 1,
+            "tags": [  // 标签列表
+                {
+                    "tag_id": 1,
+                    "name": "标签名称"
+                }
+            ]
         }
     }
     """
@@ -692,16 +751,16 @@ def publish_research(request):
     
     请求体:
     {
-        "post_id": 123,  # 可选
-        "teacher_id": 123,
-        "research_name": "小型目标检测",
-        "research_direction": "人工智能",
-        "tech_stack": "python",
-        "recruit_quantity": 5,
-        "starttime": 1735128927575,  # Unix时间戳（毫秒）
-        "endtime": 1735128927575,    # Unix时间戳（毫秒）
-        "outcome": "copyright",
-        "contact": "17833321110"
+        "post_id": 123,              // 可选，用于更新现有项目
+        "teacher_id": 123,            // 必需，教师ID
+        "research_name": "小型目标检测",  // 必需，科研项目名称
+        "research_direction": "人工智能", // 必需，研究方向（可以是单个方向或逗号分隔的多个方向，如 "人工智能,机器学习"）
+        "tech_stack": "python",       // 必需，技术栈（可以是单个技术栈或逗号分隔的多个，如 "python,tensorflow"）
+        "recruit_quantity": 5,        // 必需，招募数量（整数）
+        "starttime": 1735128927575,   // 必需，开始时间（Unix时间戳，毫秒）
+        "endtime": 1735128927575,     // 必需，结束时间（Unix时间戳，毫秒）
+        "outcome": "copyright",       // 必需，预期成果
+        "contact": "17833321110"      // 必需，联系方式
     }
     
     返回:
@@ -848,15 +907,14 @@ def publish_competition(request):
     
     请求体:
     {
-        "post_id": 122,  # 可选
-        "teacher_id": 123,
-        "competition_type": "IETP",
-        "competition_name": "城市车辆碰撞检测",
-        "deadline": 1735129477303,  # Unix时间戳（毫秒）
-        "team_require": "一名开发和一名算法",
-        "guide_way": "online",
-        "reward": "500刀",
-        "appendix": "https://xxx.xxx.com/uploads/competition/appendix_123/uuid.pdf"
+        "post_id": 122,                    // 可选，用于更新现有项目
+        "teacher_id": 123,                 // 必需，教师ID
+        "competition_type": "IETP",       // 必需，竞赛类型，可选值: "IETP" / "AC" / "CC"
+        "competition_name": "城市车辆碰撞检测",  // 必需，竞赛名称
+        "deadline": 1735129477303,        // 必需，截止时间（Unix时间戳，毫秒）
+        "team_require": "一名开发和一名算法",   // 必需，团队要求
+        "guide_way": "online",            // 必需，指导方式，可选值: "online" / "offline"
+        "reward": "500刀"                  // 可选，奖励（可为空字符串或null）
     }
     
     返回:
@@ -1021,26 +1079,25 @@ def publish_personal(request):
     
     请求体:
     {
-        "post_id": 124,  # 可选
-        "student_id": 124,
-        "major": "网络工程",
-        "skills": [
+        "post_id": 124,                    // 可选，用于更新现有项目
+        "student_id": 124,                 // 必需，学生ID
+        "major": "网络工程",                // 必需，专业（可以是单个专业或逗号分隔的多个专业，如 "网络工程,人工智能"）
+        "skills": [                        // 必需，技能列表（至少包含一个技能）
             {
-                "skill_name": "C/C++",
-                "skill_degree": "skillful"
+                "skill_name": "C/C++",     // 必需，技能名称
+                "skill_degree": "skillful" // 必需，技能程度，可选值: "skillful" / "known"
             },
             {
                 "skill_name": "Python",
                 "skill_degree": "known"
             }
         ],
-        "project_experience": "能独立开发驱动",
-        "experience_file": "https://xxx.xxx.com/uploads/student/student_123/experience/uuid.pdf",
-        "habit_tag": "人工智能",
-        "spend_time": "每周168h",
-        "expect_worktype": "research",
-        "filter": "all",
-        "certification": "https://xxx.xxx.com/uploads/student/student_123/certification/uuid.pdf"
+        "project_experience": "能独立开发驱动",  // 可选，项目经验
+        "experience_link": "https://xxx.xxx.com/uploads/student/student_123/experience/uuid.pdf",  // 可选，经验链接URL
+        "habit_tag": "人工智能",            // 可选，习惯标签
+        "spend_time": "每周168h",          // 必需，可投入时间
+        "expect_worktype": "research",     // 必需，期望工作类型，可选值: "research" / "competition" / "innovation"
+        "filter": "all"                    // 必需，筛选条件，可选值: "all" / "cross" / "local"
     }
     
     返回:

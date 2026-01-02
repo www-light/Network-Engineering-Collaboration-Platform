@@ -156,12 +156,19 @@ def list_comments(request, post_id):
         "msg": "获取成功",
         "data": [
             {
+                "comment_id": 1,
                 "user_id": 1,
-                "user_name": "用户名",
-                "comment_content": "评论内容",
+                "user_name": "张三",
+                "comment_content": "这是一条评论内容",
                 "created_at": "2024-01-01T00:00:00Z"
             },
-            ...
+            {
+                "comment_id": 2,
+                "user_id": 2,
+                "user_name": "李老师",
+                "comment_content": "另一条评论",
+                "created_at": "2024-01-02T00:00:00Z"
+            }
         ]
     }
     """
