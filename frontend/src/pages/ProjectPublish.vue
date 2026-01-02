@@ -25,22 +25,6 @@
           </el-radio-group>
         </el-form-item>
 
-        <!-- 权限设置 -->
-        <el-form-item label="可见权限" prop="visibility">
-          <div class="visibility-container">
-            <el-radio-group v-model="form.visibility" class="visibility-radio-group">
-              <el-radio :label="0">公开</el-radio>
-              <el-radio :label="1">仅教师可见</el-radio>
-              <el-radio :label="2">仅学生可见</el-radio>
-            </el-radio-group>
-            <div class="visibility-tip">
-              <span v-if="form.visibility === 0">所有用户的项目列表都会显示该项目</span>
-              <span v-else-if="form.visibility === 1">只有教师的项目列表会显示该项目</span>
-              <span v-else-if="form.visibility === 2">只有学生的项目列表会显示该项目</span>
-            </div>
-          </div>
-        </el-form-item>
-
         <!-- 科研项目表单 -->
         <template v-if="form.post_type === 'research'">
           <el-form-item label="项目名称" prop="research_name">
@@ -250,6 +234,22 @@
               </div>
             </template>
           </el-upload>
+        </el-form-item>
+
+        <!-- 权限设置 -->
+        <el-form-item label="可见权限" prop="visibility">
+          <div class="visibility-container">
+            <el-radio-group v-model="form.visibility" class="visibility-radio-group">
+              <el-radio :label="0">公开</el-radio>
+              <el-radio :label="1">仅教师可见</el-radio>
+              <el-radio :label="2">仅学生可见</el-radio>
+            </el-radio-group>
+            <div class="visibility-tip">
+              <span v-if="form.visibility === 0">所有用户的项目列表都会显示该项目</span>
+              <span v-else-if="form.visibility === 1">只有教师的项目列表会显示该项目</span>
+              <span v-else-if="form.visibility === 2">只有学生的项目列表会显示该项目</span>
+            </div>
+          </div>
         </el-form-item>
 
         <el-form-item>
