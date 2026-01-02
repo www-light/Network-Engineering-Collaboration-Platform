@@ -89,7 +89,7 @@ class Comment(models.Model):
     class Meta:
         db_table = 'Comment'
         verbose_name = '评论'
-        verbose_name_plural = '评论'
+        verbose_name_plural = '评论'  
         ordering = ['-created_at']
     
     def __str__(self):
