@@ -34,7 +34,18 @@
             </el-descriptions-item>
             <template v-if="detail.post_type === 'research'">
               <el-descriptions-item label="研究方向">
-                {{ detail.research_direction }}
+                <div class="directions-list">
+                  <el-tag
+                    v-for="(direction, index) in getResearchDirections()"
+                    :key="'direction-' + index"
+                    type="primary"
+                    size="small"
+                    style="margin-right: 8px; margin-bottom: 4px;"
+                  >
+                    {{ direction }}
+                  </el-tag>
+                  <span v-if="!getResearchDirections() || getResearchDirections().length === 0" class="no-tags">暂无研究方向</span>
+                </div>
               </el-descriptions-item>
               <el-descriptions-item label="技术栈">
                 {{ detail.tech_stack }}
@@ -556,6 +567,27 @@ const handleTimeMatch = async () => {
     ElMessage.error('获取匹配度失败')
     console.error(error)
   }
+// 获取研究方向列表（支持数组和字符串格式）
+const getResearchDirections = () => {
+  if (!props.detail || !props.detail.research_direction) return []
+  // 如果是数组，直接返回
+  if (Array.isArray(props.detail.research_direction)) {
+    return props.detail.research_direction
+  }
+  // 如果是字符串，按逗号或斜杠分割
+  if (typeof props.detail.research_direction === 'string') {
+    const str = props.detail.research_direction.trim()
+    if (!str) return []
+    // 优先按逗号分割（兼容旧数据），如果没有逗号则按斜杠分割
+    if (str.includes(',')) {
+      return str.split(',').map(d => d.trim()).filter(d => d)
+    } else if (str.includes('/')) {
+      return str.split('/').map(d => d.trim()).filter(d => d)
+    } else {
+      return [str]
+    }
+  }
+  return []
 }
 
 const loadComments = async () => {
@@ -736,6 +768,13 @@ const loadComments = async () => {
 }
 
 .skills-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.directions-list {
   display: flex;
   flex-wrap: wrap;
   align-items: center;

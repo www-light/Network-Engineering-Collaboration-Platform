@@ -13,19 +13,16 @@
           <span class="title">{{ project.title }}</span>
         </div>
         <div class="header-right">
-          <!-- 科研项目：显示技术栈 -->
-          <div v-if="project.post_type === 'research' && project.tech_stack && project.tech_stack.length > 0" class="header-tags">
+          <!-- 科研项目：显示技术栈（完整字符串） -->
+          <div v-if="project.post_type === 'research' && project.tech_stack" class="header-tags">
             <el-tag
-              v-for="(stack, index) in project.tech_stack.slice(0, 2)"
-              :key="index"
               size="small"
               type="success"
               effect="plain"
               style="margin-left: 4px;"
             >
-              {{ stack }}
+              {{ truncateText(project.tech_stack) }}
             </el-tag>
-            <span v-if="project.tech_stack.length > 2" class="more-tags">+{{ project.tech_stack.length - 2 }}</span>
           </div>
           <!-- 个人技能：显示技能和熟练度 -->
           <div v-if="project.post_type === 'personal' && project.skills && project.skills.length > 0" class="header-tags">
@@ -37,7 +34,7 @@
               effect="plain"
               style="margin-left: 4px;"
             >
-              {{ skill.skill_name }}({{ skill.skill_degree === 'skillful' ? '熟练' : '了解' }})
+              {{ truncateText(skill.skill_name + '(' + (skill.skill_degree === 'skillful' ? '熟练' : '了解') + ')') }}
             </el-tag>
           </div>
           <div v-if="project.post_type === 'personal' && project.skill_score !== undefined" class="score-pill">
@@ -120,6 +117,36 @@ const formatScore = (value) => {
   const num = Number(value)
   if (Number.isNaN(num)) return '--'
   return num.toFixed(2)
+// 截断文本：显示前10个字母或5个汉字，超过则添加省略号
+const truncateText = (text) => {
+  if (!text) return ''
+  
+  // 计算字符长度：中文字符算2个位置，英文字符算1个位置
+  let length = 0
+  let charCount = 0
+  const maxLength = 10 // 最多10个字符位置（相当于10个字母或5个汉字）
+  
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i]
+    // 判断是否为中文字符（包括中文标点）
+    const isChinese = /[\u4e00-\u9fa5\u3000-\u303f\uff00-\uffef]/.test(char)
+    
+    if (isChinese) {
+      length += 2 // 中文字符占2个位置
+    } else {
+      length += 1 // 英文字符占1个位置
+    }
+    
+    charCount++
+    
+    // 如果超过最大长度，截断并添加省略号
+    if (length > maxLength) {
+      return text.substring(0, charCount - 1) + '...'
+    }
+  }
+  
+  // 如果没超过长度，返回原文本
+  return text
 }
 </script>
 

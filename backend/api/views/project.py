@@ -286,15 +286,14 @@ def list_projects(request):
                 post_directions_dict[pd.post_id] = []
             post_directions_dict[pd.post_id].append(pd.direction.direction_name)
         
-        # 批量查询技术栈关联（用于科研项目）
+        # 批量查询技术栈关联（用于科研项目，每个post只有一个技术栈字符串）
         post_stacks_dict = {}
         post_stacks_list = PostStack.objects.filter(
             post_id__in=post_ids
         ).select_related('stack', 'post')
         for ps in post_stacks_list:
-            if ps.post_id not in post_stacks_dict:
-                post_stacks_dict[ps.post_id] = []
-            post_stacks_dict[ps.post_id].append(ps.stack.tech_stack)
+            # 每个post只保存一个技术栈字符串（如果已有则覆盖，确保唯一）
+            post_stacks_dict[ps.post_id] = ps.stack.tech_stack
         
         # 批量查询技能关联（用于个人技能）
         student_skills_dict = {}
@@ -346,8 +345,8 @@ def list_projects(request):
                 title = research.research_name
                 publisher_name = research.teacher.teacher_name
                 
-                # 获取技术栈
-                tech_stacks = post_stacks_dict.get(post.post_id, [])
+                # 获取技术栈（完整字符串）
+                tech_stack = post_stacks_dict.get(post.post_id, '')
                 
                 # 构建项目数据
                 project_data = {
@@ -359,7 +358,7 @@ def list_projects(request):
                     'favorite_num': post.favorite_num,
                     'comment_num': post.comment_num,
                     'create_time': post.create_time.isoformat() if post.create_time else None,
-                    'tech_stack': tech_stacks,  # 技术栈列表
+                    'tech_stack': tech_stack,  # 技术栈字符串
                     'attachments': attachments_dict.get(post.post_id, [])  # 附件列表
                 }
             
@@ -540,16 +539,15 @@ def get_project_detail(request, post_id):
                 # 从关联表中获取research_direction和tech_stack
                 post_directions = PostDirection.objects.filter(post=post).select_related('direction')
                 research_directions = [pd.direction.direction_name for pd in post_directions]
-                research_direction = ', '.join(research_directions) if research_directions else ''
                 
-                post_stacks = PostStack.objects.filter(post=post).select_related('stack')
-                tech_stacks = [ps.stack.tech_stack for ps in post_stacks]
-                tech_stack = ', '.join(tech_stacks) if tech_stacks else ''
+                post_stacks = PostStack.objects.filter(post=post).select_related('stack').first()
+                # 技术栈完整保存为字符串，每个post只有一个技术栈
+                tech_stack = post_stacks.stack.tech_stack if post_stacks else ''
                 
                 result.update({
                     'post_type': 'research',
                     'research_name': research.research_name,
-                    'research_direction': research_direction,
+                    'research_direction': research_directions,  # 改为数组形式
                     'tech_stack': tech_stack,
                     'recruit_quantity': research.recruit_quantity,
                     'starttime': research.starttime.isoformat() if research.starttime else None,
@@ -789,8 +787,10 @@ def sync_post_directions(post, direction_names):
     """
     # 如果direction_names是字符串，转换为列表
     if isinstance(direction_names, str):
-        # 如果包含逗号，按逗号分割；否则作为单个方向
-        if ',' in direction_names:
+        # 如果包含斜杠，按斜杠分割；如果包含逗号，按逗号分割；否则作为单个方向
+        if '/' in direction_names:
+            direction_names = [name.strip() for name in direction_names.split('/') if name.strip()]
+        elif ',' in direction_names:
             direction_names = [name.strip() for name in direction_names.split(',') if name.strip()]
         else:
             direction_names = [direction_names.strip()] if direction_names.strip() else []
@@ -834,23 +834,14 @@ def sync_post_stacks(post, stack_names):
     
     Args:
         post: PostEntity对象
-        stack_names: 技术栈名称列表（可以是字符串或列表）
+        stack_names: 技术栈名称字符串（完整保存，不分割，每个post只有一个技术栈）
     """
-    # 如果stack_names是字符串，转换为列表
-    if isinstance(stack_names, str):
-        # 如果包含逗号，按逗号分割；否则作为单个技术栈
-        if ',' in stack_names:
-            stack_names = [name.strip() for name in stack_names.split(',') if name.strip()]
-        else:
-            stack_names = [stack_names.strip()] if stack_names.strip() else []
-    
     # 删除该post的所有旧技术栈关联
     PostStack.objects.filter(post=post).delete()
     
-    # 创建新的技术栈关联
-    for stack_name in stack_names:
-        if not stack_name or not stack_name.strip():
-            continue
+    # 如果stack_names是字符串且不为空，将整个字符串作为一个技术栈保存
+    if isinstance(stack_names, str) and stack_names.strip():
+        stack_name = stack_names.strip()
         tech_stack = get_or_create_tech_stack(stack_name)
         if tech_stack:
             PostStack.objects.get_or_create(
