@@ -161,6 +161,7 @@ class ResearchPublishSerializer(serializers.Serializer):
     endtime = serializers.IntegerField(help_text='结束时间（Unix时间戳，毫秒）')
     outcome = serializers.CharField(help_text='预期成果')
     contact = serializers.CharField(help_text='联系方式')
+    visibility = serializers.IntegerField(required=False, default=0, help_text='可见权限: 0-公开, 1-仅教师可见, 2-仅学生可见')
 
 
 class CompetitionPublishSerializer(serializers.Serializer):
@@ -173,6 +174,7 @@ class CompetitionPublishSerializer(serializers.Serializer):
     team_require = serializers.CharField(help_text='团队要求')
     guide_way = serializers.CharField(help_text='指导方式: online/offline')
     reward = serializers.CharField(required=False, allow_blank=True, allow_null=True, help_text='奖励')
+    visibility = serializers.IntegerField(required=False, default=0, help_text='可见权限: 0-公开, 1-仅教师可见, 2-仅学生可见')
 
 
 class PersonalPublishSerializer(serializers.Serializer):
@@ -192,3 +194,4 @@ class PersonalPublishSerializer(serializers.Serializer):
     spend_time = serializers.CharField(help_text='可投入时间')
     expect_worktype = serializers.CharField(help_text='期望工作类型: research/competition/innovation')
     filter = serializers.CharField(help_text='筛选条件: all/cross/local')
+    visibility = serializers.IntegerField(required=False, default=0, help_text='可见权限: 0-公开, 1-仅教师可见, 2-仅学生可见')
