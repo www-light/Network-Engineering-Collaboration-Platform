@@ -9,7 +9,7 @@
         <template #header>
           <div class="detail-header">
             <h2>{{ getTitle() }}</h2>
-            <div class="header-actions">
+            <div v-if="showActions" class="header-actions">
               <el-button type="primary" @click="handleApply">
                 <el-icon><Link /></el-icon>
                 申请/邀请
@@ -191,6 +191,7 @@
             :icon="detail.is_liked ? StarFilled : Star"
             @click="$emit('like')"
             :loading="likeLoading"
+            :disabled="readonly"
           >
             {{ detail.is_liked ? '已点赞' : '点赞' }}
             <span class="count">{{ detail.like_num || 0 }}</span>
@@ -200,6 +201,7 @@
             :icon="detail.is_favorited ? CollectionTag : Collection"
             @click="$emit('favorite')"
             :loading="favoriteLoading"
+            :disabled="readonly"
           >
             {{ detail.is_favorited ? '已收藏' : '收藏' }}
             <span class="count">{{ detail.favorite_num || 0 }}</span>
@@ -216,7 +218,7 @@
         </template>
         
         <!-- 评论输入框 -->
-        <div class="comment-input-section">
+        <div v-if="!readonly" class="comment-input-section">
           <el-input
             v-model="commentText"
             type="textarea"
@@ -295,6 +297,14 @@ const props = defineProps({
     default: false
   },
   commentLoading: {
+    type: Boolean,
+    default: false
+  },
+  showActions: {
+    type: Boolean,
+    default: true
+  },
+  readonly: {
     type: Boolean,
     default: false
   }
