@@ -3,7 +3,7 @@ import request from './request'
 // 发起会话
 export const createConversation = (data) => {
   return request({
-    url: '/convsersations',
+    url: '/conversations/post',
     method: 'POST',
     data
   })
@@ -43,3 +43,34 @@ export const closeConversation = (conversationId) => {
   })
 }
 
+// 获取自动回复设置
+export const getAutoReplySettings = () => {
+  return request({
+    url: '/conversations/auto_reply/settings',
+    method: 'GET'
+  })
+}
+
+// 更新自动回复设置
+export const updateAutoReplySettings = (data) => {
+  return request({
+    url: '/conversations/auto_reply/settings',
+    method: 'PATCH',
+    data
+  })
+}
+
+// 上传会话文件
+export const uploadConversationFile = (file) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('post_id', -1)  // -1 表示会话中的文件
+  return request({
+    url: '/attachments/upload',
+    method: 'POST',
+    data: formData,
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
+}

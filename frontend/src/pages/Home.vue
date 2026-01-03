@@ -3,10 +3,15 @@
     <el-card shadow="never" class="home-card">
       <template #header>
         <div class="card-header">
-          <h2>
-            <el-icon><Bell /></el-icon>
-            消息推送
-          </h2>
+          <div class="title-row">
+            <h2>
+              <el-icon><Bell /></el-icon>
+              消息推送
+            </h2>
+            <el-badge :value="unreadTotal" :hidden="unreadTotal === 0" type="danger" class="unread-badge">
+              <span class="badge-text">未读</span>
+            </el-badge>
+          </div>
         </div>
       </template>
       <div v-if="loading" class="loading-container">
@@ -39,13 +44,25 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { Bell } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import { getConversations } from '@/api/conversation'
 
 const loading = ref(false)
 const messages = ref([])
+const unreadTotal = ref(0)
+
+const loadUnread = async () => {
+  try {
+    const conversations = await getConversations()
+    unreadTotal.value = conversations.reduce((sum, c) => sum + (Number(c.unread_count) || 0), 0)
+  } catch (error) {
+    ElMessage.error('获取未读消息失败')
+    console.error(error)
+  }
+}
 
 onMounted(() => {
-  // TODO: 从后端获取消息推送
-  // 这里暂时使用示例数据
+  // TODO: 从后端获取消息推送（当前保留示例）
   messages.value = [
     {
       id: 1,
@@ -54,6 +71,7 @@ onMounted(() => {
       time: new Date().toLocaleString('zh-CN')
     }
   ]
+  loadUnread()
 })
 </script>
 
@@ -72,6 +90,17 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.unread-badge .badge-text {
+  font-size: 14px;
+  color: #606266;
 }
 
 .card-header h2 {
