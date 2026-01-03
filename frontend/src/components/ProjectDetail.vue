@@ -189,7 +189,7 @@
           <el-button
             :type="detail.is_liked ? 'primary' : 'default'"
             :icon="detail.is_liked ? StarFilled : Star"
-            @click="handleLike"
+            @click="$emit('like')"
             :loading="likeLoading"
           >
             {{ detail.is_liked ? '已点赞' : '点赞' }}
@@ -198,7 +198,7 @@
           <el-button
             :type="detail.is_favorited ? 'warning' : 'default'"
             :icon="detail.is_favorited ? CollectionTag : Collection"
-            @click="handleFavorite"
+            @click="$emit('favorite')"
             :loading="favoriteLoading"
           >
             {{ detail.is_favorited ? '已收藏' : '收藏' }}
@@ -228,7 +228,7 @@
           <div class="comment-submit">
             <el-button
               type="primary"
-              @click="handleSubmitComment"
+              @click="$emit('comment', commentText.trim())"
               :loading="commentLoading"
               :disabled="!commentText.trim()"
             >
@@ -274,8 +274,7 @@
 import { ref, watch, onMounted } from 'vue'
 import { Link, Message, Download, Star, StarFilled, Collection, CollectionTag } from '@element-plus/icons-vue'
 import { downloadFile, getProjectDetail } from '@/api/project'
-import { likePost, unlikePost, favoritePost, unfavoritePost, commentPost, getComments } from '@/api/post'
-import { useUserStore } from '@/store/user'
+import { getComments } from '@/api/post'
 import { ElMessage } from 'element-plus'
 
 const props = defineProps({
@@ -286,17 +285,25 @@ const props = defineProps({
   loading: {
     type: Boolean,
     default: false
+  },
+  likeLoading: {
+    type: Boolean,
+    default: false
+  },
+  favoriteLoading: {
+    type: Boolean,
+    default: false
+  },
+  commentLoading: {
+    type: Boolean,
+    default: false
   }
 })
 
-const emit = defineEmits(['apply', 'message', 'update:detail'])
+const emit = defineEmits(['apply', 'message', 'like', 'favorite', 'comment', 'update:detail'])
 
-const userStore = useUserStore()
 const commentText = ref('')
 const comments = ref([])
-const likeLoading = ref(false)
-const favoriteLoading = ref(false)
-const commentLoading = ref(false)
 const commentsLoading = ref(false)
 
 // 监听detail变化，加载评论
@@ -462,100 +469,6 @@ const formatMajor = (major) => {
     return major.length > 0 ? major.join('、') : ''
   }
   return major
-}
-
-const handleLike = async () => {
-  if (!userStore.isLoggedIn) {
-    ElMessage.warning('请先登录')
-    return
-  }
-  
-  if (!props.detail?.post_id) return
-  
-  likeLoading.value = true
-  try {
-    if (props.detail.is_liked) {
-      await unlikePost({ post_id: props.detail.post_id })
-      props.detail.is_liked = false
-      props.detail.like_num = Math.max(0, (props.detail.like_num || 0) - 1)
-      ElMessage.success('取消点赞成功')
-    } else {
-      await likePost({ post_id: props.detail.post_id })
-      props.detail.is_liked = true
-      props.detail.like_num = (props.detail.like_num || 0) + 1
-      ElMessage.success('点赞成功')
-    }
-    emit('update:detail', props.detail)
-  } catch (error) {
-    ElMessage.error(props.detail.is_liked ? '取消点赞失败' : '点赞失败')
-    console.error(error)
-  } finally {
-    likeLoading.value = false
-  }
-}
-
-const handleFavorite = async () => {
-  if (!userStore.isLoggedIn) {
-    ElMessage.warning('请先登录')
-    return
-  }
-  
-  if (!props.detail?.post_id) return
-  
-  favoriteLoading.value = true
-  try {
-    if (props.detail.is_favorited) {
-      await unfavoritePost({ post_id: props.detail.post_id })
-      props.detail.is_favorited = false
-      props.detail.favorite_num = Math.max(0, (props.detail.favorite_num || 0) - 1)
-      ElMessage.success('取消收藏成功')
-    } else {
-      await favoritePost({ post_id: props.detail.post_id })
-      props.detail.is_favorited = true
-      props.detail.favorite_num = (props.detail.favorite_num || 0) + 1
-      ElMessage.success('收藏成功')
-    }
-    emit('update:detail', props.detail)
-  } catch (error) {
-    ElMessage.error(props.detail.is_favorited ? '取消收藏失败' : '收藏失败')
-    console.error(error)
-  } finally {
-    favoriteLoading.value = false
-  }
-}
-
-const handleSubmitComment = async () => {
-  if (!userStore.isLoggedIn) {
-    ElMessage.warning('请先登录')
-    return
-  }
-  
-  if (!commentText.value.trim()) {
-    ElMessage.warning('评论内容不能为空')
-    return
-  }
-  
-  if (!props.detail?.post_id) return
-  
-  commentLoading.value = true
-  try {
-    await commentPost({
-      post_id: props.detail.post_id,
-      comment: commentText.value.trim()
-    })
-    ElMessage.success('评论成功')
-    commentText.value = ''
-    // 重新加载评论列表
-    await loadComments()
-    // 更新评论数
-    props.detail.comment_num = (props.detail.comment_num || 0) + 1
-    emit('update:detail', props.detail)
-  } catch (error) {
-    ElMessage.error('评论失败')
-    console.error(error)
-  } finally {
-    commentLoading.value = false
-  }
 }
 
 const loadComments = async () => {

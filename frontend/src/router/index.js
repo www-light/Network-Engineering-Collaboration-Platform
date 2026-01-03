@@ -27,12 +27,6 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
-    path: '/projects/:id',
-    name: 'ProjectDetail',
-    component: () => import('@/pages/ProjectDetail.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
     path: '/publish',
     name: 'ProjectPublish',
     component: () => import('@/pages/ProjectPublish.vue'),
@@ -54,12 +48,6 @@ const routes = [
     path: '/message',
     name: 'Message',
     component: () => import('@/pages/Message.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/message/:conversationId',
-    name: 'MessageDetail',
-    component: () => import('@/pages/MessageDetail.vue'),
     meta: { requiresAuth: true }
   }
 ]
