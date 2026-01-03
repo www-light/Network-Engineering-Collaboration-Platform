@@ -21,7 +21,7 @@ export const useUserStore = defineStore('user', () => {
         user_id: response.user_id,
         identity: response.identity,
         account: data.account,
-        name: '',
+        name: response.name,
         token: response.token
       }
       // 保存到localStorage

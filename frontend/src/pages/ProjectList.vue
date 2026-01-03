@@ -142,27 +142,38 @@ const handleProjectClick = async (project) => {
 }
 
 const handleApply = async () => {
-  if (!selectedProjectId.value) return
-  
+  if (!selectedProjectId.value || !currentDetail.value) return
+  if (!ensureLoggedIn()) return
+
+  const me = userStore.userInfo
+  const isTeacher = me?.identity === 1
+  const isStudent = me?.identity === 0
+  const isTeacherPost = !!currentDetail.value.teacher_user_id
+  const isStudentPost = !!currentDetail.value.student_user_id
+
+  let role
+  if (isTeacher && isStudentPost) {
+    // 老师对学生发布的信息：邀请
+    role = 1
+  } else if (isStudent && isTeacherPost) {
+    // 学生对老师发布的信息：申请
+    role = 0
+  } else {
+    ElMessage.warning('当前身份与发布者身份相同，无需申请/邀请')
+    return
+  }
+
   try {
-    const { value: roleStr } = await ElMessageBox.prompt('请选择角色：0-申请者, 1-邀请者', '申请/邀请', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      inputType: 'number',
-      inputPlaceholder: '0或1'
-    })
-    
-    const role = parseInt(roleStr || '0')
     await applyAndInvite({
       post_id: selectedProjectId.value,
       role
     })
-    ElMessage.success('操作成功')
+    ElMessage.success(role === 1 ? '邀请已发送' : '申请已提交')
   } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error('操作失败')
-      console.error(error)
-    }
+    // 提取后端返回的具体错误消息
+    const errorMsg = error.response?.data?.error || error.message || '操作失败'
+    ElMessage.error(errorMsg)
+    console.error(error)
   }
 }
 
