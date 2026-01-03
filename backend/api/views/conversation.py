@@ -228,6 +228,13 @@ def send_message(request, conversation_id):
                 status=status.HTTP_403_FORBIDDEN
             )
         
+        # 检查会话是否已关闭，关闭的会话无法发送消息
+        if conversation.status == 0:
+            return Response(
+                {'code': 403, 'msg': '会话已关闭，无法发送消息'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
     except Conversation.DoesNotExist:
         return Response({'code': 404, 'msg': '会话不存在'}, status=status.HTTP_404_NOT_FOUND)
     
