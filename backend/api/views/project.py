@@ -1,7 +1,7 @@
 """
 项目相关视图
 """
-from django.db import transaction
+from django.db import transaction, models
 from django.utils import timezone
 from datetime import datetime
 from rest_framework.decorators import api_view
@@ -9,8 +9,9 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from ..models import PostEntity, ResearchProject, CompetitionProject, SkillInformation
-from ..models import TeacherEntity, StudentEntity, Tag, PostTag
+from ..models import TeacherEntity, StudentEntity, Tag, PostTag,User
 from ..models import Skill, StudentSkill
+from ..models import TeacherStudentCooperation
 from ..models.attachment import PostAttachment
 from ..models.direction import PostDirection, PostStack, TechStack, Direction
 from ..models.direction import Direction, PostDirection
@@ -339,7 +340,7 @@ def get_project_detail(request, post_id):
             "contact": "联系方式",
             "appendix": "附件URL",
             "teacher_name": "教师姓名",
-            "teacher_id": 1,
+            "teacher_user_id": 1,
             # 竞赛项目 (competition):
             "competition_name": "竞赛名称",
             "competition_type": "竞赛类型",
@@ -359,7 +360,7 @@ def get_project_detail(request, post_id):
             "filter": "筛选条件",
             "certification": "证书",
             "student_name": "学生姓名",
-            "student_id": 1
+            "student_user_id": 1
         }
     }
     """
@@ -419,7 +420,7 @@ def get_project_detail(request, post_id):
                     'outcome': research.outcome,
                     'contact': research.contact,
                     'teacher_name': research.teacher.teacher_name,
-                    'teacher_id': research.teacher.teacher_id
+                    'teacher_user_id': TeacherEntity.objects.get(teacher_id=research.teacher_id).user_id
                 })
             except ResearchProject.DoesNotExist:
                 return Response(
@@ -448,7 +449,7 @@ def get_project_detail(request, post_id):
                     'guide_way': guide_way_str,
                     'reward': competition.reward,
                     'teacher_name': competition.teacher.teacher_name,
-                    'teacher_id': competition.teacher.teacher_id
+                    'teacher_user_id': TeacherEntity.objects.get(teacher_id=competition.teacher_id).user_id
                 })
             except CompetitionProject.DoesNotExist:
                 return Response(
@@ -493,7 +494,7 @@ def get_project_detail(request, post_id):
                     'expect_worktype': skill.expect_worktype,
                     'filter': skill.filter,
                     'student_name': skill.student.student_name,
-                    'student_id': skill.student.student_id,
+                    'student_user_id': StudentEntity.objects.get(student_id=skill.student_id).user_id,
                     'tags': tags_list  # 添加标签列表
                 })
             except SkillInformation.DoesNotExist:
@@ -733,6 +734,24 @@ def publish_research(request):
         }
     }
     """
+    user = request.user
+    
+    # 检查用户是否有未完成的合作流程
+    teacher = TeacherEntity.objects.filter(user_id=user.user_id).first()
+    student = StudentEntity.objects.filter(user_id=user.user_id).first()
+    
+    q_objects = models.Q()
+    if teacher:
+        q_objects |= models.Q(teacher_id=teacher.teacher_id)
+    if student:
+        q_objects |= models.Q(student_id=student.student_id)
+    
+    if (teacher or student) and TeacherStudentCooperation.objects.filter(status=2).filter(q_objects).exists():
+        return Response(
+            {'code': 403, 'msg': '存在未完成的合作流程，请先完成后再发布'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
     serializer = ResearchPublishSerializer(data=request.data)
     
     if not serializer.is_valid():
@@ -899,6 +918,24 @@ def publish_competition(request):
         }
     }
     """
+    user = request.user
+    
+    # 检查用户是否有未完成的合作流程
+    teacher = TeacherEntity.objects.filter(user_id=user.user_id).first()
+    student = StudentEntity.objects.filter(user_id=user.user_id).first()
+    
+    q_objects = models.Q()
+    if teacher:
+        q_objects |= models.Q(teacher_id=teacher.teacher_id)
+    if student:
+        q_objects |= models.Q(student_id=student.student_id)
+    
+    if (teacher or student) and TeacherStudentCooperation.objects.filter(status=2).filter(q_objects).exists():
+        return Response(
+            {'code': 403, 'msg': '存在未完成的合作流程，请先完成后再发布'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
     serializer = CompetitionPublishSerializer(data=request.data)
     
     if not serializer.is_valid():
@@ -1095,6 +1132,24 @@ def publish_personal(request):
         }
     }
     """
+    user = request.user
+    
+    # 检查用户是否有未完成的合作流程
+    teacher = TeacherEntity.objects.filter(user_id=user.user_id).first()
+    student = StudentEntity.objects.filter(user_id=user.user_id).first()
+    
+    q_objects = models.Q()
+    if teacher:
+        q_objects |= models.Q(teacher_id=teacher.teacher_id)
+    if student:
+        q_objects |= models.Q(student_id=student.student_id)
+    
+    if (teacher or student) and TeacherStudentCooperation.objects.filter(status=2).filter(q_objects).exists():
+        return Response(
+            {'code': 403, 'msg': '存在未完成的合作流程，请先完成后再发布'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
     serializer = PersonalPublishSerializer(data=request.data)
     
     if not serializer.is_valid():

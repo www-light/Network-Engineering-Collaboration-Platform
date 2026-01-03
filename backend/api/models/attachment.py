@@ -20,6 +20,8 @@ class PostAttachment(models.Model):
     post = models.ForeignKey(
         PostEntity,
         on_delete=models.CASCADE,
+        null=True,
+        blank=True,
         db_column='post_id',
         related_name='attachments',
         verbose_name='发布信息ID'

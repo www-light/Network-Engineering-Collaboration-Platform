@@ -54,7 +54,7 @@ def upload_attachment(request):
     
     请求参数:
     - file: 文件（必填）
-    - post_id: 项目ID（必填）
+    - post_id: 项目ID（可选；不传表示通用上传，可用于私信转发/预上传）
     
     返回:
     {
@@ -75,7 +75,7 @@ def upload_attachment(request):
     """
     try:
         # 获取用户
-        user = request.user
+        user = get_user_from_token(request)
         
         # 获取上传的文件
         if 'file' not in request.FILES:
@@ -86,81 +86,78 @@ def upload_attachment(request):
         
         uploaded_file = request.FILES['file']
         
-        # 获取post_id
-        post_id = request.data.get('post_id')
-        if not post_id:
-            return Response(
-                {'code': 400, 'msg': '未提供post_id'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        try:
-            post_id = int(post_id)
-        except (ValueError, TypeError):
-            return Response(
-                {'code': 400, 'msg': 'post_id格式错误'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # 验证post是否存在
-        try:
-            post = PostEntity.objects.get(post_id=post_id)
-        except PostEntity.DoesNotExist:
-            return Response(
-                {'code': 404, 'msg': '项目不存在'},
-                status=status.HTTP_404_NOT_FOUND
-            )
-        
-        # 验证权限：用户必须是项目的创建者
-        # 对于科研项目和竞赛项目，检查是否为教师且为该项目的教师
-        # 对于个人技能，检查是否为学生且为该项目的学生
-        if post.post_type == 1:  # 科研项目
-            from ..models import ResearchProject
+        # 获取并解析post_id（可选）
+        post = None
+        post_id_raw = request.data.get('post_id')
+        if post_id_raw not in [None, '', 'null']:
             try:
-                research = ResearchProject.objects.get(post=post)
-                if user.identity != 1 or research.teacher.user != user:
-                    return Response(
-                        {'code': 403, 'msg': '无权上传该项目的附件'},
-                        status=status.HTTP_403_FORBIDDEN
-                    )
-            except ResearchProject.DoesNotExist:
+                post_id = int(post_id_raw)
+            except (ValueError, TypeError):
                 return Response(
-                    {'code': 404, 'msg': '科研项目信息不存在'},
-                    status=status.HTTP_404_NOT_FOUND
+                    {'code': 400, 'msg': 'post_id格式错误'},
+                    status=status.HTTP_400_BAD_REQUEST
                 )
-        elif post.post_type == 2:  # 竞赛项目
-            from ..models import CompetitionProject
-            try:
-                competition = CompetitionProject.objects.get(post=post)
-                if user.identity != 1 or competition.teacher.user != user:
+
+            if post_id == -1:
+                # 通用上传（用于私信/转发等场景）
+                post = None
+            else:
+                try:
+                    post = PostEntity.objects.get(post_id=post_id)
+                except PostEntity.DoesNotExist:
                     return Response(
-                        {'code': 403, 'msg': '无权上传该项目的附件'},
-                        status=status.HTTP_403_FORBIDDEN
+                        {'code': 404, 'msg': '项目不存在'},
+                        status=status.HTTP_404_NOT_FOUND
                     )
-            except CompetitionProject.DoesNotExist:
-                return Response(
-                    {'code': 404, 'msg': '竞赛项目信息不存在'},
-                    status=status.HTTP_404_NOT_FOUND
-                )
-        elif post.post_type == 3:  # 个人技能
-            from ..models import SkillInformation
-            try:
-                skill = SkillInformation.objects.get(post=post)
-                if user.identity != 0 or skill.student.user != user:
+
+                # 权限校验（仅当绑定项目时需要）
+                if post.post_type == 1:  # 科研项目
+                    from ..models import ResearchProject
+                    try:
+                        research = ResearchProject.objects.get(post=post)
+                        if user.identity != 1 or research.teacher.user != user:
+                            return Response(
+                                {'code': 403, 'msg': '无权上传该项目的附件'},
+                                status=status.HTTP_403_FORBIDDEN
+                            )
+                    except ResearchProject.DoesNotExist:
+                        return Response(
+                            {'code': 404, 'msg': '科研项目信息不存在'},
+                            status=status.HTTP_404_NOT_FOUND
+                        )
+                elif post.post_type == 2:  # 竞赛项目
+                    from ..models import CompetitionProject
+                    try:
+                        competition = CompetitionProject.objects.get(post=post)
+                        if user.identity != 1 or competition.teacher.user != user:
+                            return Response(
+                                {'code': 403, 'msg': '无权上传该项目的附件'},
+                                status=status.HTTP_403_FORBIDDEN
+                            )
+                    except CompetitionProject.DoesNotExist:
+                        return Response(
+                            {'code': 404, 'msg': '竞赛项目信息不存在'},
+                            status=status.HTTP_404_NOT_FOUND
+                        )
+                elif post.post_type == 3:  # 个人技能
+                    from ..models import SkillInformation
+                    try:
+                        skill = SkillInformation.objects.get(post=post)
+                        if user.identity != 0 or skill.student.user != user:
+                            return Response(
+                                {'code': 403, 'msg': '无权上传该项目的附件'},
+                                status=status.HTTP_403_FORBIDDEN
+                            )
+                    except SkillInformation.DoesNotExist:
+                        return Response(
+                            {'code': 404, 'msg': '个人技能信息不存在'},
+                            status=status.HTTP_404_NOT_FOUND
+                        )
+                else:
                     return Response(
-                        {'code': 403, 'msg': '无权上传该项目的附件'},
-                        status=status.HTTP_403_FORBIDDEN
+                        {'code': 400, 'msg': '不支持的项目类型'},
+                        status=status.HTTP_400_BAD_REQUEST
                     )
-            except SkillInformation.DoesNotExist:
-                return Response(
-                    {'code': 404, 'msg': '个人技能信息不存在'},
-                    status=status.HTTP_404_NOT_FOUND
-                )
-        else:
-            return Response(
-                {'code': 400, 'msg': '不支持的项目类型'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
         
         # 获取文件信息
         original_filename = uploaded_file.name
@@ -179,7 +176,11 @@ def upload_attachment(request):
         # 格式：uploads/{post_type}/{post_id}/{uuid}.{ext}
         file_ext = Path(original_filename).suffix
         file_uuid = str(uuid.uuid4())
-        storage_dir = f"uploads/{post.post_type}/{post_id}"
+        if post:
+            storage_dir = f"uploads/{post.post_type}/{post.post_id}"
+        else:
+            # 通用存储路径，按用户隔离
+            storage_dir = f"uploads/public/{user.user_id}"
         storage_filename = f"{file_uuid}{file_ext}"
         storage_path = os.path.join(storage_dir, storage_filename)
         
@@ -192,7 +193,10 @@ def upload_attachment(request):
         saved_path = default_storage.save(storage_path, ContentFile(uploaded_file.read()))
         
         # 根据post_type确定file_type
-        file_type = get_file_type_from_post_type(post.post_type)
+        if post:
+            file_type = get_file_type_from_post_type(post.post_type)
+        else:
+            file_type = 4  # 通用/其他
         
         # 创建PostAttachment记录
         attachment = PostAttachment.objects.create(
@@ -218,7 +222,7 @@ def upload_attachment(request):
                 'msg': '上传成功',
                 'data': {
                     'attachment_id': str(attachment.id),
-                    'post_id': post.post_id,
+                    'post_id': attachment.post.post_id if attachment.post else None,
                     'original_filename': attachment.original_filename,
                     'file_size': attachment.file_size,
                     'formatted_size': attachment.formatted_size,

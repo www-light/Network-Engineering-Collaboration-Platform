@@ -7,7 +7,7 @@ from ..serializers import (
     RegisterResponseSerializer,
     LoginResponseSerializer
 )
-
+from ..models import StudentEntity, TeacherEntity
 
 @api_view(['POST'])
 def register(request):
@@ -58,6 +58,7 @@ def login(request):
     返回:
     {
         "user_id": 6,
+        "name:  "普梓豪",
         "identity": 0,
         "token": "xxxxx"
     }
@@ -71,6 +72,7 @@ def login(request):
         
         response_serializer = LoginResponseSerializer({
             'user_id': user.user_id,
+            'name': StudentEntity.objects.get(user_id=user.user_id).student_name if user.identity == 0 else TeacherEntity.objects.get(user_id=user.user_id).teacher_name,
             'identity': user.identity,
             'token': token
         })

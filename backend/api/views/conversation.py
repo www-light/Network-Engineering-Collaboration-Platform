@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from ..models.message import Conversation, Message
-from ..models.user import User
+from ..models.user import User,StudentEntity,TeacherEntity
 from ..models.post import PostEntity
 from ..utils.auth import login_required, check_conversation_permission
 
@@ -19,7 +19,7 @@ from ..utils.auth import login_required, check_conversation_permission
 def create_conversation(request):
     """发起会话
     
-    POST /conversations
+    POST /conversations/post
     请求头:
     Authorization: Bearer <token>
     
@@ -60,6 +60,11 @@ def create_conversation(request):
     ).first()
     
     if existing:
+        # 若已存在且关闭，则重新开启并更新时间
+        if existing.status == 0:
+            existing.status = 1
+            existing.last_message_at = timezone.now()
+            existing.save(update_fields=['status', 'last_message_at'])
         return Response({'conversation_id': existing.conversation_id}, status=status.HTTP_200_OK)
     
     # 创建新会话
@@ -113,13 +118,34 @@ def list_conversations(request):
     conversations = conversations.order_by('-last_message_at')[:limit]
     
     result = []
+    
     for conv in conversations:
+        stu=StudentEntity.objects.filter(user_id=conv.user1_id).first()
+        if stu:
+            user1_name=stu.student_name
+        else:
+            tea=TeacherEntity.objects.filter(user_id=conv.user1_id).first()
+            user1_name=tea.teacher_name if tea else "未知用户"
+        stu1=StudentEntity.objects.filter(user_id=conv.user2_id).first()
+        if stu1:
+            user2_name=stu1.student_name
+        else:
+            tea1=TeacherEntity.objects.filter(user_id=conv.user2_id).first()
+            user2_name=tea1.teacher_name if tea1 else "未知用户"    
+        unread_count = Message.objects.filter(
+            conversation=conv,
+            is_read=False
+        ).exclude(sender_id=user.user_id).count()
+
         result.append({
             'conversation_id': conv.conversation_id,
-            'user1_id': conv.user1_id,
+            'user1_id': conv.user1_id,#会话发起者
             'user2_id': conv.user2_id,
             'status': str(conv.status),
-            'last_message_at': conv.last_message_at.isoformat()
+            'last_message_at': conv.last_message_at.isoformat(),
+            'user1_name': user1_name,
+            'user2_name': user2_name,
+            'unread_count': unread_count
         })
     
     return Response(result, status=status.HTTP_200_OK)
@@ -206,8 +232,9 @@ def send_message(request, conversation_id):
         return Response({'code': 404, 'msg': '会话不存在'}, status=status.HTTP_404_NOT_FOUND)
     
     now = timezone.now()
+    created_messages = []
     with transaction.atomic():
-        Message.objects.create(
+        user_msg = Message.objects.create(
             conversation=conversation,
             sender=sender,
             content_type=content_type,
@@ -215,11 +242,43 @@ def send_message(request, conversation_id):
             is_read=False,
             create_time=now
         )
+        created_messages.append(user_msg)
+
+        # 检查接收者的自动回复设置
+        recipient = conversation.user2 if conversation.user1 == sender else conversation.user1
+        if recipient.auto_reply_enabled and recipient.auto_reply_message:
+            auto_msg = Message.objects.create(
+                conversation=conversation,
+                sender=recipient,
+                content_type=0,  # text type
+                content=recipient.auto_reply_message,
+                is_read=False,
+                create_time=now
+            )
+            created_messages.append(auto_msg)
+
         # 更新会话的最后消息时间
         conversation.last_message_at = now
         conversation.save(update_fields=['last_message_at'])
     
-    return Response({}, status=status.HTTP_200_OK)
+    # 返回本次产生的消息，便于前端即时渲染
+    return Response(
+        {
+            'messages': [
+                {
+                    'message_id': m.message_id,
+                    'conversation_id': m.conversation_id,
+                    'sender_id': m.sender_id,
+                    'content_type': str(m.content_type),
+                    'content': m.content,
+                    'is_read': m.is_read,
+                    'create_time': m.create_time.isoformat()
+                }
+                for m in created_messages
+            ]
+        },
+        status=status.HTTP_200_OK
+    )
 
 
 @api_view(['GET'])
@@ -264,6 +323,16 @@ def list_messages(request, conversation_id):
     
     messages = messages.order_by('-create_time')[:limit + 1]
     message_list = list(messages)
+
+    # 标记当前用户收到的未读消息为已读
+    unread_ids = list(
+        Message.objects.filter(
+            conversation=conversation,
+            is_read=False
+        ).exclude(sender_id=request.user.user_id).values_list('message_id', flat=True)
+    )
+    if unread_ids:
+        Message.objects.filter(message_id__in=unread_ids).update(is_read=True)
     
     has_more = len(message_list) > limit
     if has_more:
@@ -278,6 +347,9 @@ def list_messages(request, conversation_id):
     }
     
     for msg in message_list:
+        # 如果刚刚被标记为已读，更新返回值
+        if msg.message_id in unread_ids:
+            msg.is_read = True
         result['messages'].append({
             'message_id': msg.message_id,
             'conversation_id': msg.conversation_id,
@@ -289,3 +361,52 @@ def list_messages(request, conversation_id):
         })
     
     return Response(result, status=status.HTTP_200_OK)
+
+
+@api_view(['GET', 'PATCH'])
+@login_required
+def auto_reply_settings(request):
+    """获取或更新用户的自动回复设置
+    
+    GET /conversations/auto_reply/settings
+    请求头:
+    Authorization: Bearer <token>
+    
+    返回:
+    {
+        "auto_reply_enabled": true,
+        "auto_reply_message": "我现在有点忙，稍后回复您"
+    }
+    
+    PATCH /conversations/auto_reply/settings
+    请求头:
+    Authorization: Bearer <token>
+    
+    请求体:
+    {
+        "auto_reply_enabled": true,
+        "auto_reply_message": "我现在有点忙，稍后回复您"
+    }
+    
+    返回: {}
+    """
+    user = request.user
+    
+    if request.method == 'GET':
+        return Response({
+            'auto_reply_enabled': user.auto_reply_enabled,
+            'auto_reply_message': user.auto_reply_message or ''
+        }, status=status.HTTP_200_OK)
+    
+    elif request.method == 'PATCH':
+        auto_reply_enabled = request.data.get('auto_reply_enabled')
+        auto_reply_message = request.data.get('auto_reply_message')
+        
+        if auto_reply_enabled is not None:
+            user.auto_reply_enabled = auto_reply_enabled
+        if auto_reply_message is not None:
+            user.auto_reply_message = auto_reply_message
+        
+        user.save(update_fields=['auto_reply_enabled', 'auto_reply_message'])
+        return Response({}, status=status.HTTP_200_OK)
+

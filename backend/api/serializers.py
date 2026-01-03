@@ -145,6 +145,7 @@ class RegisterResponseSerializer(serializers.Serializer):
 class LoginResponseSerializer(serializers.Serializer):
     """登录响应序列化器"""
     user_id = serializers.IntegerField()
+    name=serializers.CharField()
     identity = serializers.IntegerField()
     token = serializers.CharField()
 

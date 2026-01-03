@@ -9,7 +9,8 @@ from .conversation import (
     list_conversations,
     close_conversation,
     send_message,
-    list_messages
+    list_messages,
+    auto_reply_settings
 )
 from .tag import tags
 from .project import list_projects, get_project_detail, publish_research, publish_competition, publish_personal
@@ -30,6 +31,7 @@ __all__ = [
     'close_conversation',
     'send_message',
     'list_messages',
+    'auto_reply_settings',
     'tags',
     'list_projects',
     'get_project_detail',

@@ -58,8 +58,14 @@
         <ProjectDetail
           :detail="currentDetail"
           :loading="detailLoading"
+          :like-loading="likeLoading"
+          :favorite-loading="favoriteLoading"
+          :comment-loading="commentLoading"
           @apply="handleApply"
           @message="handleMessage"
+          @like="handleLike"
+          @favorite="handleFavorite"
+          @comment="handleSubmitComment"
           @update:detail="handleDetailUpdate"
         />
       </el-main>
@@ -74,6 +80,7 @@ import { useProjectStore } from '@/store/project'
 import { getProjectDetail } from '@/api/project'
 import { applyAndInvite } from '@/api/cooperation'
 import { createConversation } from '@/api/conversation'
+import { likePost, unlikePost, favoritePost, unfavoritePost, commentPost } from '@/api/post'
 import { useUserStore } from '@/store/user'
 import ProjectCard from '@/components/ProjectCard.vue'
 import ProjectDetail from '@/components/ProjectDetail.vue'
@@ -87,6 +94,9 @@ const selectedDirection = ref('all')
 const selectedProjectId = ref(null)
 const currentDetail = ref(null)
 const detailLoading = ref(false)
+const likeLoading = ref(false)
+const favoriteLoading = ref(false)
+const commentLoading = ref(false)
 const currentPage = ref(1)
 const pageSize = ref(20)
 
@@ -132,27 +142,38 @@ const handleProjectClick = async (project) => {
 }
 
 const handleApply = async () => {
-  if (!selectedProjectId.value) return
-  
+  if (!selectedProjectId.value || !currentDetail.value) return
+  if (!ensureLoggedIn()) return
+
+  const me = userStore.userInfo
+  const isTeacher = me?.identity === 1
+  const isStudent = me?.identity === 0
+  const isTeacherPost = !!currentDetail.value.teacher_user_id
+  const isStudentPost = !!currentDetail.value.student_user_id
+
+  let role
+  if (isTeacher && isStudentPost) {
+    // 老师对学生发布的信息：邀请
+    role = 1
+  } else if (isStudent && isTeacherPost) {
+    // 学生对老师发布的信息：申请
+    role = 0
+  } else {
+    ElMessage.warning('当前身份与发布者身份相同，无需申请/邀请')
+    return
+  }
+
   try {
-    const { value: roleStr } = await ElMessageBox.prompt('请选择角色：0-申请者, 1-邀请者', '申请/邀请', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      inputType: 'number',
-      inputPlaceholder: '0或1'
-    })
-    
-    const role = parseInt(roleStr || '0')
     await applyAndInvite({
       post_id: selectedProjectId.value,
       role
     })
-    ElMessage.success('操作成功')
+    ElMessage.success(role === 1 ? '邀请已发送' : '申请已提交')
   } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error('操作失败')
-      console.error(error)
-    }
+    // 提取后端返回的具体错误消息
+    const errorMsg = error.response?.data?.error || error.message || '操作失败'
+    ElMessage.error(errorMsg)
+    console.error(error)
   }
 }
 
@@ -160,17 +181,96 @@ const handleMessage = async () => {
   if (!selectedProjectId.value || !currentDetail.value) return
   
   try {
-    const receiverId = currentDetail.value.teacher_id || userStore.userInfo?.user_id
+    const receiverId = currentDetail.value.teacher_user_id || userStore.userInfo?.user_id
     
     const response = await createConversation({
       post_id: selectedProjectId.value,
       receiver_id: receiverId
     })
     
-    router.push(`/message/${response.conversation_id}`)
+    router.push({
+      name: 'Message',
+      query: { conversationId: response.conversation_id }
+    })
   } catch (error) {
     ElMessage.error('创建会话失败')
     console.error(error)
+  }
+}
+
+const ensureLoggedIn = () => {
+  if (!userStore.userInfo?.user_id) {
+    ElMessage.warning('请先登录')
+    router.push('/login')
+    return false
+  }
+  return true
+}
+
+const handleLike = async () => {
+  if (!ensureLoggedIn() || !currentDetail.value) return
+  
+  likeLoading.value = true
+  try {
+    if (currentDetail.value.is_liked) {
+      await unlikePost({ post_id: currentDetail.value.post_id })
+      currentDetail.value.is_liked = false
+      currentDetail.value.like_num = Math.max(0, (currentDetail.value.like_num || 0) - 1)
+      ElMessage.success('取消点赞成功')
+    } else {
+      await likePost({ post_id: currentDetail.value.post_id })
+      currentDetail.value.is_liked = true
+      currentDetail.value.like_num = (currentDetail.value.like_num || 0) + 1
+      ElMessage.success('点赞成功')
+    }
+  } catch (error) {
+    ElMessage.error(currentDetail.value.is_liked ? '取消点赞失败' : '点赞失败')
+    console.error(error)
+  } finally {
+    likeLoading.value = false
+  }
+}
+
+const handleFavorite = async () => {
+  if (!ensureLoggedIn() || !currentDetail.value) return
+  
+  favoriteLoading.value = true
+  try {
+    if (currentDetail.value.is_favorited) {
+      await unfavoritePost({ post_id: currentDetail.value.post_id })
+      currentDetail.value.is_favorited = false
+      currentDetail.value.favorite_num = Math.max(0, (currentDetail.value.favorite_num || 0) - 1)
+      ElMessage.success('取消收藏成功')
+    } else {
+      await favoritePost({ post_id: currentDetail.value.post_id })
+      currentDetail.value.is_favorited = true
+      currentDetail.value.favorite_num = (currentDetail.value.favorite_num || 0) + 1
+      ElMessage.success('收藏成功')
+    }
+  } catch (error) {
+    ElMessage.error(currentDetail.value.is_favorited ? '取消收藏失败' : '收藏失败')
+    console.error(error)
+  } finally {
+    favoriteLoading.value = false
+  }
+}
+
+const handleSubmitComment = async (commentText) => {
+  if (!ensureLoggedIn() || !currentDetail.value) return
+  
+  commentLoading.value = true
+  try {
+    await commentPost({
+      post_id: currentDetail.value.post_id,
+      comment: commentText
+    })
+    ElMessage.success('评论成功')
+    currentDetail.value.comment_num = (currentDetail.value.comment_num || 0) + 1
+  } catch (error) {
+    ElMessage.error('评论失败')
+    console.error(error)
+  } finally {
+    commentLoading.value = false
   }
 }
 
