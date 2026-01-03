@@ -114,6 +114,9 @@
               <el-descriptions-item label="专业方向">
                 {{ formatMajor(detail.major) }}
               </el-descriptions-item>
+              <el-descriptions-item v-if="detail.skill_score !== undefined" label="技能评分">
+                {{ formatScore(detail.skill_score) }}
+              </el-descriptions-item>
               <el-descriptions-item label="技能" :span="2">
                 <div class="skills-list">
                   <el-tag
@@ -204,6 +207,15 @@
             {{ detail.is_favorited ? '已收藏' : '收藏' }}
             <span class="count">{{ detail.favorite_num || 0 }}</span>
           </el-button>
+          <!-- 个人技能才显示时间匹配度按钮 -->
+          <el-button
+            v-if="detail.post_type === 'personal' && isTeacher"
+            type="success"
+            @click="handleTimeMatch"
+          >
+            <el-icon><Clock /></el-icon>
+            可投入时间匹配度
+          </el-button>
         </div>
       </el-card>
 
@@ -271,11 +283,15 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue'
-import { Link, Message, Download, Star, StarFilled, Collection, CollectionTag } from '@element-plus/icons-vue'
-import { downloadFile, getProjectDetail } from '@/api/project'
+import { ref, watch, onMounted, computed } from 'vue'
+import { Link, Message, Download, Star, StarFilled, Collection, CollectionTag, Clock } from '@element-plus/icons-vue'
+import { downloadFile, getProjectDetail, getTimeMatch } from '@/api/project'
 import { getComments } from '@/api/post'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { useUserStore } from '@/store/user'
+
+const userStore = useUserStore()
+const isTeacher = computed(() => userStore.userInfo?.identity === 1)
 
 const props = defineProps({
   detail: {
@@ -469,6 +485,77 @@ const formatMajor = (major) => {
     return major.length > 0 ? major.join('、') : ''
   }
   return major
+}
+
+const formatScore = (value) => {
+  const num = Number(value)
+  if (Number.isNaN(num)) return '--'
+  return num.toFixed(2)
+}
+
+const handleTimeMatch = async () => {
+  if (!props.detail?.post_id) return
+  
+  try {
+    const response = await getTimeMatch(props.detail.post_id)
+    if (response.code === 200) {
+      const { data } = response
+      
+      // 构建表格HTML
+      let tableHtml = `
+        <div style="max-height: 400px; overflow-y: auto;">
+          <p style="margin-bottom: 10px;">
+            学生每周可投入时间：<strong>${data.student_hours_per_week || '未解析'} 小时</strong>
+            ${!data.parsed ? '<span style="color: #f56c6c;">（解析失败）</span>' : ''}
+          </p>
+          <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+            <thead>
+              <tr style="background: #f5f7fa;">
+                <th style="padding: 8px; border: 1px solid #dcdfe6; text-align: left;">项目名称</th>
+                <th style="padding: 8px; border: 1px solid #dcdfe6; text-align: center;">需求(h/周)</th>
+                <th style="padding: 8px; border: 1px solid #dcdfe6; text-align: center;">匹配度</th>
+              </tr>
+            </thead>
+            <tbody>
+      `
+      
+      data.projects.forEach(project => {
+        const hoursText = project.project_hours_per_week !== null 
+          ? project.project_hours_per_week 
+          : '<span style="color: #909399;">-</span>'
+        const ratioText = project.match_ratio !== null 
+          ? project.match_ratio 
+          : '<span style="color: #909399;">无法计算</span>'
+        
+        tableHtml += `
+          <tr>
+            <td style="padding: 8px; border: 1px solid #dcdfe6;">${project.title}</td>
+            <td style="padding: 8px; border: 1px solid #dcdfe6; text-align: center;">${hoursText}</td>
+            <td style="padding: 8px; border: 1px solid #dcdfe6; text-align: center;">${ratioText}</td>
+          </tr>
+        `
+      })
+      
+      tableHtml += `
+            </tbody>
+          </table>
+        </div>
+      `
+      
+      ElMessageBox({
+        title: '可投入时间匹配度',
+        dangerouslyUseHTMLString: true,
+        message: tableHtml,
+        confirmButtonText: '关闭',
+        customClass: 'time-match-dialog'
+      })
+    } else {
+      ElMessage.error(response.msg || '获取匹配度失败')
+    }
+  } catch (error) {
+    ElMessage.error('获取匹配度失败')
+    console.error(error)
+  }
 }
 
 const loadComments = async () => {

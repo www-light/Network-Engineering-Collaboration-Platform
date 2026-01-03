@@ -40,6 +40,9 @@
               {{ skill.skill_name }}({{ skill.skill_degree === 'skillful' ? '熟练' : '了解' }})
             </el-tag>
           </div>
+          <div v-if="project.post_type === 'personal' && project.skill_score !== undefined" class="score-pill">
+            评分 {{ formatScore(project.skill_score) }}
+          </div>
         </div>
       </div>
       <div class="card-info">
@@ -112,6 +115,12 @@ const formatTime = (time) => {
   const date = new Date(time)
   return date.toLocaleDateString('zh-CN')
 }
+
+const formatScore = (value) => {
+  const num = Number(value)
+  if (Number.isNaN(num)) return '--'
+  return num.toFixed(2)
+}
 </script>
 
 <style scoped>
@@ -166,6 +175,7 @@ const formatTime = (time) => {
   display: flex;
   align-items: center;
   flex-shrink: 0;
+  gap: 6px;
 }
 
 .header-tags {
@@ -203,6 +213,16 @@ const formatTime = (time) => {
   font-size: 12px;
   margin-left: 16px;
   margin-bottom: 8px;
+}
+
+.score-pill {
+  background: #f0f9ff;
+  color: #409eff;
+  border: 1px solid #a0cfff;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 1;
 }
 
 .card-footer {
