@@ -11,7 +11,7 @@ from .views import (
 from .views.cooperation import (
     apply_cooperation, approve_application, reject_application,reject_invitation,
     cancel_apply, invite_student, cancel_invite, agree_invite,
-    check_unfinished
+    check_unfinished, list_cooperations
 )
 
 urlpatterns = [
@@ -31,15 +31,16 @@ urlpatterns = [
     path('attachments/<uuid:file_id>/download', download_attachment, name='download_attachment'),
     
     # 合作流程
-    path('cooperation/apply', apply_cooperation, name='apply_cooperation'),
-    path('cooperation/approve', approve_application, name='approve_application'),
-    path('cooperation/apply/reject', reject_application, name='reject_application'),
-    path('cooperation/invite/reject', reject_invitation, name='reject_invitation'),
-    path('cooperation/apply/cancel', cancel_apply, name='cancel_apply'),
-    path('cooperation/invite', invite_student, name='invite_student'),
-    path('cooperation/invite/cancel', cancel_invite, name='cancel_invite'),
-    path('cooperation/agree', agree_invite, name='agree_invite'),
-    path('cooperation/check-unfinished', check_unfinished, name='check_unfinished'),
+    path('cooperation/apply', apply_cooperation, name='apply_cooperation'),#申请
+    path('cooperation/approve', approve_application, name='approve_application'),#教师同意学生申请
+    path('cooperation/apply/reject', reject_application, name='reject_application'),#教师拒绝学生申请
+    path('cooperation/invite/reject', reject_invitation, name='reject_invitation'),#学生拒绝教师邀请
+    path('cooperation/apply/cancel', cancel_apply, name='cancel_apply'),#学生取消申请
+    path('cooperation/invite', invite_student, name='invite_student'),#教师邀请学生
+    path('cooperation/invite/cancel', cancel_invite, name='cancel_invite'),#教师取消邀请
+    path('cooperation/agree', agree_invite, name='agree_invite'),#学生同意教师邀请
+    path('cooperation/list', list_cooperations, name='list_cooperations'),# 获取合作列表
+    path('cooperation/check-unfinished', check_unfinished, name='check_unfinished'),# 检查未完成的合作请求
     
     # 站内私信
     path('conversations/post', create_conversation, name='create_conversation'),

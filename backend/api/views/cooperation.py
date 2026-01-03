@@ -382,7 +382,7 @@ def cancel_apply(request):
         {
             "message": "取消成功",
             "cooperation_id": int,
-            "status": 3
+            "status": 5
         }
     """
     return cancel_cooperation(request)
@@ -578,6 +578,115 @@ def agree_invite(request):
             },
             status=status.HTTP_200_OK
         )
+    
+    except Exception as e:
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@login_required
+def list_cooperations(request):
+    """
+    分页获取当前用户的所有合作记录
+    
+    Query Parameters:
+        - page: 页码（从1开始），默认为1
+        - page_size: 每页记录数，默认为10
+    
+    Response (200):
+        {
+            "count": int,           # 总记录数
+            "next": url or null,    # 下一页URL
+            "previous": url or null,# 上一页URL
+            "results": [
+                {
+                    "cooperation_id": int,
+                    "post_id": int,
+                    "post_name": str,
+                    "role": boolean (0=邀请, 1=申请),
+                    "status": int (2=待确认, 3=已确认, 4=被拒绝, 5=已取消),
+                    "created_at": datetime,
+                    "updated_at": datetime,
+                    "confirmed_at": datetime or null,
+                    "teacher_name": str,
+                    "student_name": str
+                }
+            ]
+        }
+    """
+    try:
+        user_id = get_user_from_token(request)
+        
+        # 获取分页参数
+        page = int(request.query_params.get('page', 1))
+        page_size = int(request.query_params.get('page_size', 10))
+        
+        # 验证分页参数
+        if page < 1:
+            page = 1
+        if page_size < 1 or page_size > 100:
+            page_size = 10
+        
+        teacher = TeacherEntity.objects.filter(user_id=user_id).first()
+        student = StudentEntity.objects.filter(user_id=user_id).first()
+
+        # 构建查询条件,只能获取和自己相关的合作记录
+        q_objects = models.Q()
+        if teacher:
+            q_objects |= models.Q(teacher_id=teacher.teacher_id)
+        if student:
+            q_objects |= models.Q(student_id=student.student_id)
+
+        # 获取所有合作记录并排序
+        cooperations = Cooperation.objects.filter(q_objects).order_by('-updated_at')
+        total_count = cooperations.count()
+        
+        # 分页计算
+        offset = (page - 1) * page_size
+        paginated_cooperations = cooperations[offset:offset + page_size]
+        
+        # 构建结果列表
+        result_list = []
+        for coop in paginated_cooperations:
+            post = PostEntity.objects.get(post_id=coop.post_id)
+            teacher_name = TeacherEntity.objects.get(teacher_id=coop.teacher_id).teacher_name
+            student_name = StudentEntity.objects.get(student_id=coop.student_id).student_name
+            if post.post_type==1:
+                post_name=ResearchProject.objects.get(post_id=post.post_id).research_name
+            elif post.post_type==2:
+                post_name=CompetitionProject.objects.get(post_id=post.post_id).competition_name
+            else:
+                post_name="邀请学生"
+            result_list.append({
+                'cooperation_id': coop.cooperation_id,
+                'post_id': coop.post_id,
+                'post_name': post_name,
+                'role': coop.role,  # 0=邀请, 1=申请
+                'status': coop.status,  # 2=待确认, 3=已确认, 4=被拒绝, 5=已取消
+                'created_at': coop.created_at.isoformat(),
+                'updated_at': coop.updated_at.isoformat(),
+                'confirmed_at': coop.confirmed_at.isoformat() if coop.confirmed_at else None,
+                'teacher_name': teacher_name,
+                'student_name': student_name
+            })
+        
+        # 计算分页信息
+        total_pages = (total_count + page_size - 1) // page_size
+        has_next = page < total_pages
+        has_previous = page > 1
+        
+        return Response({
+            'count': total_count,
+            'total_pages': total_pages,
+            'current_page': page,
+            'page_size': page_size,
+            'next': has_next,
+            'previous': has_previous,
+            'results': result_list
+        }, status=status.HTTP_200_OK)
     
     except Exception as e:
         return Response(

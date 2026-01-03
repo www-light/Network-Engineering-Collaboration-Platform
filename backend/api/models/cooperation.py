@@ -13,6 +13,7 @@ class TeacherStudentCooperation(models.Model):
         (2, 'pending'),
         (3, 'confirmed'),
         (4, 'rejected'),
+        (5, 'canceled'),
     ]
     cooperation_id = models.AutoField(primary_key=True, verbose_name='合作关系ID')
     teacher = models.ForeignKey(
@@ -37,7 +38,7 @@ class TeacherStudentCooperation(models.Model):
     status = models.SmallIntegerField(
         choices=STATUS_CHOICES,
         verbose_name='状态',
-        help_text='状态: 2-待双方确认, 3-已确认, 4-已拒绝'
+        help_text='状态: 2-待双方确认, 3-已确认, 4-已拒绝,5-已取消'
     )
     created_at = models.DateTimeField(verbose_name='创建时间')
     updated_at = models.DateTimeField(verbose_name='更新时间')
