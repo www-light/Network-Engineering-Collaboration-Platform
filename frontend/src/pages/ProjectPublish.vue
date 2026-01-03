@@ -46,6 +46,7 @@
               placeholder="选择开始时间"
               format="YYYY-MM-DD"
               value-format="YYYY-MM-DD"
+              @change="handleStartTimeChange"
             />
           </el-form-item>
           <el-form-item label="结束时间" prop="endtime">
@@ -306,7 +307,25 @@ const rules = {
   tech_stack: [{ required: true, message: '请输入技术栈', trigger: 'blur' }],
   recruit_quantity: [{ required: true, message: '请输入招募人数', trigger: 'blur' }], 
   starttime: [{ required: true, message: '请输入开始时间', trigger: 'blur' }],
-  endtime: [{ required: true, message: '请输入结束时间', trigger: 'blur' }],
+  endtime: [
+    { required: true, message: '请输入结束时间', trigger: 'blur' },
+    {
+      validator: (rule, value, callback) => {
+        if (!value || !form.starttime) {
+          callback()
+          return
+        }
+        const startTimestamp = dateToTimestamp(form.starttime)
+        const endTimestamp = dateToTimestamp(value)
+        if (startTimestamp && endTimestamp && endTimestamp < startTimestamp) {
+          callback(new Error('结束时间不能早于开始时间'))
+        } else {
+          callback()
+        }
+      },
+      trigger: 'change'
+    }
+  ],
   outcome: [{ required: true, message: '请输入预期成果', trigger: 'blur' }],
   contact: [{ required: true, message: '请输入联系方式', trigger: 'blur' }],
 
@@ -364,6 +383,13 @@ const handleTypeChange = () => {
   })
   if (form.post_type === 'research') {
     form.recruit_quantity = 1
+  }
+}
+
+// 开始时间改变时，重新验证结束时间
+const handleStartTimeChange = () => {
+  if (form.endtime && formRef.value) {
+    formRef.value.validateField('endtime', () => {})
   }
 }
 
