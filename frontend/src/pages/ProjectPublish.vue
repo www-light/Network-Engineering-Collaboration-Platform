@@ -31,10 +31,16 @@
             <el-input v-model="form.research_name" placeholder="请输入项目名称" />
           </el-form-item>
           <el-form-item label="研究方向" prop="research_direction">
-            <el-input v-model="form.research_direction" placeholder="如 “人工智能 / 网络安全” 等" />
+            <el-input 
+              v-model="form.research_direction" 
+              placeholder="使用 xxx/xxx/xxx 格式输入多个研究方向，例如：人工智能/网络安全/机器学习"
+            />
           </el-form-item>
           <el-form-item label="技术栈" prop="tech_stack">
-            <el-input v-model="form.tech_stack" placeholder="如 “java / python / 机器学习” 等" />
+            <el-input 
+              v-model="form.tech_stack" 
+              placeholder="使用 xxx/xxx/xxx 格式输入多个技术栈，例如：Java/Python/机器学习"
+            />
           </el-form-item>
           <el-form-item label="招募人数" prop="recruit_quantity">
             <el-input-number v-model="form.recruit_quantity" :min="1" :max="5" />
@@ -500,8 +506,8 @@ const handleSubmit = async () => {
           const submitData = {
             teacher_id: parseInt(userStore.userInfo?.account),
             research_name: form.research_name,
-            research_direction: form.research_direction,
-            tech_stack: form.tech_stack,
+            research_direction: form.research_direction, // 直接发送原始字符串，后端按/分割处理
+            tech_stack: form.tech_stack, // 直接发送原始字符串，后端完整保存
             recruit_quantity: form.recruit_quantity,
             starttime: dateToTimestamp(form.starttime),
             endtime: dateToTimestamp(form.endtime),
