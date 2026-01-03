@@ -25,6 +25,8 @@ class User(models.Model):
     is_active = models.BooleanField(default=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
     token = models.CharField(max_length=64, blank=True, null=True, verbose_name='认证令牌')
+    auto_reply_enabled = models.BooleanField(default=False, verbose_name='自动回复已启用')
+    auto_reply_message = models.TextField(blank=True, null=True, verbose_name='自动回复消息')
     
     class Meta:
         db_table = 'User'
