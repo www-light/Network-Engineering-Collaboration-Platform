@@ -97,3 +97,14 @@ export const uploadAttachment = (postId, file) => {
   })
 }
 
+// 更新招募状态
+export const updateRecruitStatus = (postId, recruitStatus) => {
+  return request({
+    url: `/project/update-recruit-status/${postId}`,
+    method: 'POST',
+    data: {
+      recruit_status: recruitStatus
+    }
+  })
+}
+

@@ -8,15 +8,39 @@
       <el-card shadow="never" class="detail-card">
         <template #header>
           <div class="detail-header">
-            <h2>{{ getTitle() }}</h2>
-            <div v-if="showActions" class="header-actions">
-              <el-button type="primary" @click="handleApply">
-                <el-icon><Link /></el-icon>
-                申请/邀请
-              </el-button>
-              <el-button @click="handleMessage">
-                <el-icon><Message /></el-icon>
-                私信
+            <div class="header-title-section">
+              <h2>{{ getTitle() }}</h2>
+              <!-- 招募状态标签（显示在项目名称右侧） -->
+              <el-tag 
+                v-if="showRecruitStatusOnly || showRecruitStatusButton" 
+                :type="getRecruitStatusType" 
+                size="large"
+                style="margin-left: 12px;"
+              >
+                {{ getRecruitStatusText }}
+              </el-tag>
+            </div>
+            <div class="header-actions-section">
+              <div v-if="showActions" class="header-actions">
+                <el-button type="primary" @click="handleApply">
+                  <el-icon><Link /></el-icon>
+                  申请/邀请
+                </el-button>
+                <el-button @click="handleMessage">
+                  <el-icon><Message /></el-icon>
+                  私信
+                </el-button>
+              </div>
+              <!-- 更改招募状态按钮（仅在个人中心模块显示） -->
+              <el-button 
+                v-if="showRecruitStatusButton"
+                type="primary" 
+                :icon="Edit" 
+                @click="handleChangeRecruitStatus"
+                :loading="recruitStatusLoading"
+                style="margin-left: 12px;"
+              >
+                更改招募状态
               </el-button>
             </div>
           </div>
@@ -296,11 +320,12 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, computed } from 'vue'
-import { Link, Message, Download, Star, StarFilled, Collection, CollectionTag, Clock } from '@element-plus/icons-vue'
-import { downloadFile, getProjectDetail, getTimeMatch } from '@/api/project'
+
+import { ref, watch, onMounted, computed,h } from 'vue'
+import { Link, Message, Download, Star, StarFilled, Collection, CollectionTag, Clock,Edit } from '@element-plus/icons-vue'
+import { downloadFile, getProjectDetail, getTimeMatch, updateRecruitStatus } from '@/api/project'
 import { getComments } from '@/api/post'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox, ElRadioGroup, ElRadio } from 'element-plus'
 import { useUserStore } from '@/store/user'
 
 const userStore = useUserStore()
@@ -334,14 +359,58 @@ const props = defineProps({
   readonly: {
     type: Boolean,
     default: false
+  },
+  allowEditRecruitStatus: {
+    type: Boolean,
+    default: false
   }
 })
 
 const emit = defineEmits(['apply', 'message', 'like', 'favorite', 'comment', 'update:detail'])
 
+const userStore = useUserStore()
 const commentText = ref('')
 const comments = ref([])
 const commentsLoading = ref(false)
+const recruitStatusLoading = ref(false)
+
+// 判断是否显示更改招募状态按钮
+const showRecruitStatusButton = computed(() => {
+  if (!props.detail) return false
+  // 必须允许编辑招募状态（仅在个人中心模块允许）
+  if (!props.allowEditRecruitStatus) return false
+  // 必须是教师
+  if (!userStore.isTeacher) return false
+  // 必须是科研项目或竞赛项目
+  if (props.detail.post_type !== 'research' && props.detail.post_type !== 'competition') return false
+  // 必须是项目发布者
+  const currentUserId = userStore.userInfo?.user_id
+  const teacherUserId = props.detail.teacher_user_id
+  return currentUserId === teacherUserId
+})
+
+// 判断是否只显示招募状态（不显示编辑按钮）
+const showRecruitStatusOnly = computed(() => {
+  if (!props.detail) return false
+  // 必须是科研项目或竞赛项目
+  if (props.detail.post_type !== 'research' && props.detail.post_type !== 'competition') return false
+  // 如果允许编辑且满足条件，则不显示只读状态（因为会显示带编辑按钮的版本）
+  if (showRecruitStatusButton.value) return false
+  // 其他情况显示只读状态
+  return true
+})
+
+// 获取招募状态文本
+const getRecruitStatusText = computed(() => {
+  if (!props.detail) return ''
+  return props.detail.recruit_status === 0 ? '正在招募' : '招募截止'
+})
+
+// 获取招募状态标签类型
+const getRecruitStatusType = computed(() => {
+  if (!props.detail) return 'success'
+  return props.detail.recruit_status === 0 ? 'success' : 'info'
+})
 
 // 监听detail变化，加载评论
 watch(() => props.detail?.post_id, (postId) => {
@@ -616,6 +685,140 @@ const loadComments = async () => {
     commentsLoading.value = false
   }
 }
+
+// 更改招募状态
+const handleChangeRecruitStatus = async () => {
+  if (!props.detail) return
+  
+  try {
+    const currentStatus = props.detail.recruit_status
+    const selectedStatusRef = ref(currentStatus)
+    
+    // 第一步：选择新的招募状态
+    // 使用单选按钮组让用户点击选择
+    await ElMessageBox({
+      title: '更改招募状态',
+      message: () => {
+        return h('div', { 
+          style: 'padding: 20px 0; min-width: 300px;' 
+        }, [
+          h('p', { 
+            style: 'margin-bottom: 20px; color: #606266; font-size: 14px; text-align: center;' 
+          }, '请选择新的招募状态'),
+          h('div', {
+            style: 'display: flex; justify-content: center; align-items: center;'
+          }, [
+            h(ElRadioGroup, {
+              modelValue: selectedStatusRef.value,
+              'onUpdate:modelValue': (val) => {
+                selectedStatusRef.value = val
+              },
+              style: 'display: flex; flex-direction: row; gap: 32px; justify-content: center;'
+            }, {
+              default: () => [
+                h(ElRadio, { 
+                  label: 0
+                }, {
+                  default: () => '正在招募'
+                }),
+                h(ElRadio, { 
+                  label: 1
+                }, {
+                  default: () => '招募截止'
+                })
+              ]
+            })
+          ])
+        ])
+      },
+      showCancelButton: true,
+      confirmButtonText: '下一步',
+      cancelButtonText: '取消',
+      distinguishCancelAndClose: true,
+      beforeClose: (action, instance, done) => {
+        if (action === 'confirm') {
+          if (selectedStatusRef.value === null || selectedStatusRef.value === undefined) {
+            ElMessage.warning('请选择招募状态')
+            return
+          }
+          instance.confirmButtonLoading = true
+          instance.confirmButtonDisabled = true
+          setTimeout(() => {
+            instance.confirmButtonLoading = false
+            instance.confirmButtonDisabled = false
+            done()
+          }, 100)
+        } else {
+          done()
+        }
+      }
+    }).catch((action) => {
+      // 用户取消选择
+      if (action === 'cancel' || action === 'close') {
+        throw 'cancel'
+      }
+      throw 'cancel'
+    })
+    
+    const selectedStatus = selectedStatusRef.value
+    
+    if (selectedStatus === null || selectedStatus === undefined || selectedStatus === '') {
+      return
+    }
+    
+    const newStatusInt = parseInt(selectedStatus)
+    const statusText = newStatusInt === 0 ? '正在招募' : '招募截止'
+    
+    // 如果选择的状态和当前状态相同，提示用户
+    if (newStatusInt === currentStatus) {
+      ElMessage.info('招募状态未发生变化')
+      return
+    }
+    
+    // 第二步：确认操作
+    await ElMessageBox.confirm(
+      `确定要将招募状态更改为"${statusText}"吗？`,
+      '确认更改',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    ).catch(() => {
+      // 用户取消确认
+      throw 'cancel'
+    })
+    
+    // 执行更新
+    recruitStatusLoading.value = true
+    try {
+      const response = await updateRecruitStatus(props.detail.post_id, newStatusInt)
+      if (response.code === 200) {
+        ElMessage.success('招募状态更新成功')
+        // 更新本地状态
+        if (props.detail) {
+          props.detail.recruit_status = newStatusInt
+          emit('update:detail', props.detail)
+        }
+      } else {
+        ElMessage.error(response.msg || '更新失败')
+      }
+    } catch (error) {
+      if (error === 'cancel') {
+        return
+      }
+      console.error('更新招募状态失败:', error)
+      const errorMsg = error.response?.data?.msg || error.message || '更新招募状态失败'
+      ElMessage.error(errorMsg)
+    } finally {
+      recruitStatusLoading.value = false
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('更改招募状态失败:', error)
+    }
+  }
+}
 </script>
 
 <style scoped>
@@ -634,12 +837,29 @@ const loadComments = async () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.header-title-section {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
 }
 
 .detail-header h2 {
   margin: 0;
   color: #303133;
   font-size: 20px;
+  flex-shrink: 0;
+}
+
+.header-actions-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
 }
 
 .header-actions {
