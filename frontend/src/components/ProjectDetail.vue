@@ -647,6 +647,8 @@ const handleTimeMatch = async () => {
     ElMessage.error('获取匹配度失败')
     console.error(error)
   }
+}
+
 // 获取研究方向列表（支持数组和字符串格式）
 const getResearchDirections = () => {
   if (!props.detail || !props.detail.research_direction) return []
