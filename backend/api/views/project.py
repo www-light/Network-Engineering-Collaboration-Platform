@@ -9,6 +9,7 @@ from datetime import datetime
 from functools import lru_cache
 
 from django.db import transaction, models
+from django.db.models import Q
 from django.utils import timezone
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -155,14 +156,18 @@ def classify_match(student_hours: float, project_hours: float):
 
 @api_view(['GET'])
 def list_projects(request):
-    """获取项目列表接口（支持分页）
+    """获取项目列表接口（支持分页和关键词搜索）
     
     GET /project/list
     查询参数（可选）:
     - post_type: 项目类型筛选 (research/competition/personal)
     - user_id: 用户ID筛选，只返回该用户发布的项目
+    - search: 关键词搜索，在多个字段中进行模糊搜索
     - page: 页码，从1开始（默认：1）
     - page_size: 每页数量（默认：20）
+    
+    搜索范围：competition_name, team_require, reward, post_direction, 
+    post_stack, research_name, outcome, project_name, habit_tag, stu_skill
     
     返回:
     {
@@ -193,6 +198,7 @@ def list_projects(request):
         # 获取筛选参数
         post_type_filter = request.GET.get('post_type', None)
         user_id_filter = request.GET.get('user_id', None)
+        search_keyword = request.GET.get('search', None)
         
         # 获取分页参数
         try:
@@ -286,6 +292,36 @@ def list_projects(request):
             except (ValueError, TypeError):
                 # user_id无效，忽略该筛选条件
                 pass
+        
+        # 如果有关键词搜索，进行多字段模糊搜索
+        if search_keyword and search_keyword.strip():
+            search_term = search_keyword.strip()
+            # 构建Q对象进行OR查询，在多个字段中搜索
+            search_query = Q()
+            
+            # 搜索科研项目字段
+            search_query |= Q(researchproject__research_name__icontains=search_term)
+            search_query |= Q(researchproject__outcome__icontains=search_term)
+            
+            # 搜索竞赛项目字段
+            search_query |= Q(competitionproject__competition_name__icontains=search_term)
+            search_query |= Q(competitionproject__team_require__icontains=search_term)
+            search_query |= Q(competitionproject__reward__icontains=search_term)
+            
+            # 搜索个人技能字段
+            search_query |= Q(skillinformation__project_experience__icontains=search_term)
+            
+            # 搜索方向和技术栈字段
+            search_query |= Q(postdirection__direction__direction_name__icontains=search_term)
+            search_query |= Q(poststack__stack__tech_stack__icontains=search_term)
+            
+            # 搜索标签字段
+            search_query |= Q(posttag__tag__name__icontains=search_term)
+            
+            # 搜索技能字段
+            
+            # 应用搜索过滤，并使用distinct去重，因为多个关联可能返回重复的post
+            posts_query = posts_query.filter(search_query).distinct()
         
         # 计算总数
         total = posts_query.count()
