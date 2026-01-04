@@ -36,6 +36,40 @@
                 </template>
               </el-input>
             </div>
+            <div class="filter-row">
+              <el-input
+                v-model="techStack"
+                placeholder="技术栈"
+                clearable
+                size="small"
+                class="filter-item"
+                @change="handleFilterChange"
+              />
+              <el-select
+                v-model="timeCycle"
+                placeholder="时间周期"
+                size="small"
+                class="filter-item"
+                @change="handleFilterChange"
+              >
+                <el-option label="全部" value="all" />
+                <el-option label="3个月以内" value="lt3" />
+                <el-option label="6个月以内" value="lt6" />
+                <el-option label="一年以内" value="lt12" />
+                <el-option label="> 一年" value="gt12" />
+              </el-select>
+              <el-select
+                v-model="recruitStatus"
+                placeholder="招募状态"
+                size="small"
+                class="filter-item"
+                @change="handleFilterChange"
+              >
+                <el-option label="全部" value="all" />
+                <el-option label="正在招募" value="0" />
+                <el-option label="招募截止" value="1" />
+              </el-select>
+            </div>
             <div class="project-list">
               <div v-if="projectStore.loading" class="loading-container">
                 <el-skeleton :rows="5" animated />
@@ -114,21 +148,28 @@ const commentLoading = ref(false)
 const currentPage = ref(1)
 const pageSize = ref(20)
 const searchKeyword = ref('')
+const techStack = ref('')
+const timeCycle = ref('all')
+const recruitStatus = ref('all')
 
 // 使用store中的项目和分页信息
 const filteredProjects = computed(() => projectStore.projects)
 const total = computed(() => projectStore.total)
 
-onMounted(async () => {
-  await projectStore.fetchProjects(selectedDirection.value, currentPage.value, pageSize.value, searchKeyword.value)
-  if (projectStore.projects.length > 0) {
-    handleProjectClick(projectStore.projects[0])
-  }
+const buildFilters = () => ({
+  tech_stack: techStack.value,
+  time_cycle: timeCycle.value,
+  recruit_status: recruitStatus.value
 })
 
-const handleSearch = async () => {
-  currentPage.value = 1
-  await projectStore.fetchProjects(selectedDirection.value, currentPage.value, pageSize.value, searchKeyword.value)
+const fetchList = async () => {
+  await projectStore.fetchProjects(
+    selectedDirection.value,
+    currentPage.value,
+    pageSize.value,
+    searchKeyword.value,
+    buildFilters()
+  )
   if (filteredProjects.value.length > 0) {
     handleProjectClick(filteredProjects.value[0])
   } else {
@@ -137,15 +178,23 @@ const handleSearch = async () => {
   }
 }
 
+onMounted(async () => {
+  await fetchList()
+})
+
+const handleSearch = async () => {
+  currentPage.value = 1
+  await fetchList()
+}
+
 const handleDirectionChange = async () => {
   currentPage.value = 1
-  await projectStore.fetchProjects(selectedDirection.value, currentPage.value, pageSize.value, searchKeyword.value)
-  if (filteredProjects.value.length > 0) {
-    handleProjectClick(filteredProjects.value[0])
-  } else {
-    selectedProjectId.value = null
-    currentDetail.value = null
-  }
+  await fetchList()
+}
+
+const handleFilterChange = async () => {
+  currentPage.value = 1
+  await fetchList()
 }
 
 const handleProjectClick = async (project) => {
@@ -303,24 +352,12 @@ const handleSubmitComment = async (commentText) => {
 const handleSizeChange = async (size) => {
   pageSize.value = size
   currentPage.value = 1
-  await projectStore.fetchProjects(selectedDirection.value, currentPage.value, pageSize.value, searchKeyword.value)
-  if (filteredProjects.value.length > 0) {
-    handleProjectClick(filteredProjects.value[0])
-  } else {
-    selectedProjectId.value = null
-    currentDetail.value = null
-  }
+  await fetchList()
 }
 
 const handlePageChange = async (page) => {
   currentPage.value = page
-  await projectStore.fetchProjects(selectedDirection.value, currentPage.value, pageSize.value, searchKeyword.value)
-  if (filteredProjects.value.length > 0) {
-    handleProjectClick(filteredProjects.value[0])
-  } else {
-    selectedProjectId.value = null
-    currentDetail.value = null
-  }
+  await fetchList()
 }
 
 const handleDetailUpdate = (updatedDetail) => {
@@ -384,6 +421,20 @@ const handleDetailUpdate = (updatedDetail) => {
 
 .search-container :deep(.el-input) {
   border-radius: 4px;
+}
+
+.filter-row {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #e4e7ed;
+  flex-wrap: wrap;
+  background: #fff;
+}
+
+.filter-item {
+  min-width: 140px;
+  flex: 1;
 }
 
 .aside-header {
