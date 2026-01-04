@@ -183,6 +183,16 @@ const loading = ref(false)
 const editingAchievements = ref(false)
 const editedAchievements = ref('')
 
+const userProjects = ref([])
+const projectsLoading = ref(false)
+const selectedProjectId = ref(null)
+const showDetailDialog = ref(false)
+const currentDetail = ref(null)
+const detailLoading = ref(false)
+const likeLoading = ref(false)
+const favoriteLoading = ref(false)
+const commentLoading = ref(false)
+
 const gradeMap = {
   1: '大一',
   2: '大二',
@@ -248,15 +258,7 @@ const toggleEditAchievements = async () => {
 const cancelEditAchievements = () => {
   editingAchievements.value = false
   editedAchievements.value = profileData.value?.past_achievements || ''
-const userProjects = ref([])
-const projectsLoading = ref(false)
-const selectedProjectId = ref(null)
-const showDetailDialog = ref(false)
-const currentDetail = ref(null)
-const detailLoading = ref(false)
-const likeLoading = ref(false)
-const favoriteLoading = ref(false)
-const commentLoading = ref(false)
+}
 
 // 加载用户发布的项目
 const loadUserProjects = async () => {

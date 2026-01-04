@@ -328,7 +328,14 @@ import { getComments } from '@/api/post'
 import { ElMessage, ElMessageBox, ElRadioGroup, ElRadio } from 'element-plus'
 import { useUserStore } from '@/store/user'
 
+
+const emit = defineEmits(['apply', 'message', 'like', 'favorite', 'comment', 'update:detail'])
+
 const userStore = useUserStore()
+const commentText = ref('')
+const comments = ref([])
+const commentsLoading = ref(false)
+const recruitStatusLoading = ref(false)
 const isTeacher = computed(() => userStore.userInfo?.identity === 1)
 
 const props = defineProps({
@@ -366,13 +373,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['apply', 'message', 'like', 'favorite', 'comment', 'update:detail'])
 
-const userStore = useUserStore()
-const commentText = ref('')
-const comments = ref([])
-const commentsLoading = ref(false)
-const recruitStatusLoading = ref(false)
 
 // 判断是否显示更改招募状态按钮
 const showRecruitStatusButton = computed(() => {
