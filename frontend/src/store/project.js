@@ -11,8 +11,8 @@ export const useProjectStore = defineStore('project', () => {
   const pageSize = ref(20)
   const totalPages = ref(0)
 
-  // 获取项目列表（支持分页和搜索）
-  const fetchProjects = async (direction, pageNum = 1, size = 20, search = '') => {
+  // 获取项目列表（支持分页、搜索及额外筛选）
+  const fetchProjects = async (direction, pageNum = 1, size = 20, search = '', extraFilters = {}) => {
     loading.value = true
     try {
       // 构建查询参数
@@ -25,6 +25,15 @@ export const useProjectStore = defineStore('project', () => {
       }
       if (search && search.trim()) {
         params.search = search.trim()
+      }
+      if (extraFilters.tech_stack && extraFilters.tech_stack.trim()) {
+        params.tech_stack = extraFilters.tech_stack.trim()
+      }
+      if (extraFilters.time_cycle && extraFilters.time_cycle !== 'all') {
+        params.time_cycle = extraFilters.time_cycle
+      }
+      if (extraFilters.recruit_status && extraFilters.recruit_status !== 'all') {
+        params.recruit_status = extraFilters.recruit_status
       }
       
       const response = await getProjects(params)
