@@ -499,7 +499,7 @@ def list_projects(request):
                     'major': directions,  # 专业方向列表
                     'skills': skills,  # 技能列表（包含技能名和熟练度）
                     'attachments': attachments_dict.get(post.post_id, []),  # 附件列表
-                    'recruit_status': post.recruit_status  # 招募状态（个人技能项目也有此字段，但通常不显示）
+                    'recruit_status': post.recruit_status,  # 招募状态（个人技能项目也有此字段，但通常不显示）
                     'skill_score': score_payload['total_score'],
                 }
             
