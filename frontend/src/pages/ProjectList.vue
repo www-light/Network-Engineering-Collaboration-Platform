@@ -22,6 +22,20 @@
             </div>
           </template>
           <div class="card-body-wrapper">
+            <!-- 搜索框 -->
+            <div class="search-container">
+              <el-input
+                v-model="searchKeyword"
+                placeholder="搜索项目..."
+                clearable
+                @input="handleSearch"
+                @keyup.enter="handleSearch"
+              >
+                <template #prefix>
+                  <el-icon><i class="fa fa-search"></i></el-icon>
+                </template>
+              </el-input>
+            </div>
             <div class="project-list">
               <div v-if="projectStore.loading" class="loading-container">
                 <el-skeleton :rows="5" animated />
@@ -99,21 +113,33 @@ const favoriteLoading = ref(false)
 const commentLoading = ref(false)
 const currentPage = ref(1)
 const pageSize = ref(20)
+const searchKeyword = ref('')
 
 // 使用store中的项目和分页信息
 const filteredProjects = computed(() => projectStore.projects)
 const total = computed(() => projectStore.total)
 
 onMounted(async () => {
-  await projectStore.fetchProjects(selectedDirection.value, currentPage.value, pageSize.value)
+  await projectStore.fetchProjects(selectedDirection.value, currentPage.value, pageSize.value, searchKeyword.value)
   if (projectStore.projects.length > 0) {
     handleProjectClick(projectStore.projects[0])
   }
 })
 
+const handleSearch = async () => {
+  currentPage.value = 1
+  await projectStore.fetchProjects(selectedDirection.value, currentPage.value, pageSize.value, searchKeyword.value)
+  if (filteredProjects.value.length > 0) {
+    handleProjectClick(filteredProjects.value[0])
+  } else {
+    selectedProjectId.value = null
+    currentDetail.value = null
+  }
+}
+
 const handleDirectionChange = async () => {
   currentPage.value = 1
-  await projectStore.fetchProjects(selectedDirection.value, currentPage.value, pageSize.value)
+  await projectStore.fetchProjects(selectedDirection.value, currentPage.value, pageSize.value, searchKeyword.value)
   if (filteredProjects.value.length > 0) {
     handleProjectClick(filteredProjects.value[0])
   } else {
@@ -277,7 +303,7 @@ const handleSubmitComment = async (commentText) => {
 const handleSizeChange = async (size) => {
   pageSize.value = size
   currentPage.value = 1
-  await projectStore.fetchProjects(selectedDirection.value, currentPage.value, pageSize.value)
+  await projectStore.fetchProjects(selectedDirection.value, currentPage.value, pageSize.value, searchKeyword.value)
   if (filteredProjects.value.length > 0) {
     handleProjectClick(filteredProjects.value[0])
   } else {
@@ -288,7 +314,7 @@ const handleSizeChange = async (size) => {
 
 const handlePageChange = async (page) => {
   currentPage.value = page
-  await projectStore.fetchProjects(selectedDirection.value, currentPage.value, pageSize.value)
+  await projectStore.fetchProjects(selectedDirection.value, currentPage.value, pageSize.value, searchKeyword.value)
   if (filteredProjects.value.length > 0) {
     handleProjectClick(filteredProjects.value[0])
   } else {
@@ -348,6 +374,16 @@ const handleDetailUpdate = (updatedDetail) => {
   flex-direction: column;
   height: 100%;
   overflow: hidden;
+}
+
+.search-container {
+  padding: 12px;
+  border-bottom: 1px solid #e4e7ed;
+  flex-shrink: 0;
+}
+
+.search-container :deep(.el-input) {
+  border-radius: 4px;
 }
 
 .aside-header {

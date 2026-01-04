@@ -11,8 +11,8 @@ export const useProjectStore = defineStore('project', () => {
   const pageSize = ref(20)
   const totalPages = ref(0)
 
-  // 获取项目列表（支持分页）
-  const fetchProjects = async (direction, pageNum = 1, size = 20) => {
+  // 获取项目列表（支持分页和搜索）
+  const fetchProjects = async (direction, pageNum = 1, size = 20, search = '') => {
     loading.value = true
     try {
       // 构建查询参数
@@ -22,6 +22,9 @@ export const useProjectStore = defineStore('project', () => {
       }
       if (direction && direction !== 'all') {
         params.post_type = direction
+      }
+      if (search && search.trim()) {
+        params.search = search.trim()
       }
       
       const response = await getProjects(params)
