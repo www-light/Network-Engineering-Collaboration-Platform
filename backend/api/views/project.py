@@ -1,9 +1,15 @@
 """
 项目相关视图
 """
+import json
+import os
+import re
+import math
+from datetime import datetime
+from functools import lru_cache
+
 from django.db import transaction, models
 from django.utils import timezone
-from datetime import datetime
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
@@ -18,6 +24,133 @@ from ..models.direction import Direction, PostDirection
 from ..models.interaction import Like, Favorite, Comment
 from ..serializers import ResearchPublishSerializer, CompetitionPublishSerializer, PersonalPublishSerializer
 from ..utils.auth import login_required, get_user_from_token
+
+
+# 技能评分权重配置
+WORD_WEIGHT_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'word_weight.txt')
+PROFICIENCY_WEIGHT_MAP = {0: 2, 1: 1}  # 0=skillful -> 熟练(2); 1=known -> 了解(1)
+ALPHA_WEIGHT = 0.6  # 关键词得分占比
+BETA_WEIGHT = 0.4   # 技术熟练度占比
+
+
+def _strip_json_comments(content: str) -> str:
+    """移除简单的 /* ... */ 注释，便于解析为 JSON。"""
+    return re.sub(r'/\*.*?\*/', '', content, flags=re.S)
+
+
+@lru_cache(maxsize=1)
+def load_word_weights():
+    """读取关键词权重配置，读取失败时返回空列表。"""
+    try:
+        with open(WORD_WEIGHT_FILE, 'r', encoding='utf-8') as f:
+            raw_content = f.read()
+        cleaned = _strip_json_comments(raw_content)
+        return json.loads(cleaned)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return []
+
+
+def calculate_keyword_score(project_experience: str) -> float:
+    """根据项目经历文本匹配关键词得分。"""
+    if not project_experience:
+        return 0.0
+    text_lower = project_experience.lower()
+    score = 0.0
+    for item in load_word_weights():
+        names = [item.get('name', '')]
+        aliases = item.get('aliases') or []
+        keywords = [kw for kw in names + aliases if kw]
+        for keyword in keywords:
+            if keyword.lower() in text_lower:
+                score += float(item.get('base_weight', 0))
+                break  # 同一组命中一次即可
+    return score
+
+
+def calculate_proficiency_score(skills_data) -> float:
+    """根据技能熟练度累加得分。"""
+    total = 0.0
+    for skill_item in skills_data:
+        proficiency = None
+        if isinstance(skill_item, dict):
+            proficiency = skill_item.get('proficiency')
+            if proficiency is None:
+                degree_str = (skill_item.get('skill_degree') or '').strip().lower()
+                if degree_str == 'skillful':
+                    proficiency = 0
+                elif degree_str == 'known':
+                    proficiency = 1
+        else:
+            proficiency = getattr(skill_item, 'proficiency', None)
+        total += PROFICIENCY_WEIGHT_MAP.get(proficiency, 0)
+    return total
+
+
+def calculate_skill_score(project_experience: str, skills_data) -> dict:
+    """综合关键词与熟练度，返回总分及分项。"""
+    keyword_score = calculate_keyword_score(project_experience)
+    proficiency_score = calculate_proficiency_score(skills_data)
+    total_score = keyword_score * ALPHA_WEIGHT + proficiency_score * BETA_WEIGHT
+    return {
+        'total_score': round(total_score, 2),
+        'keyword_score': round(keyword_score, 2),
+        'proficiency_score': round(proficiency_score, 2)
+    }
+
+
+# ===================== 可投入时间匹配 =====================
+SHORT_PROJECT_HOURS = 10  # ≤4周
+MID_PROJECT_HOURS = 8     # 5-12周
+LONG_PROJECT_HOURS = 6    # >12周
+
+
+def parse_hours_per_week(text: str) -> tuple[float, bool]:
+    """从文本解析每周投入小时数，返回 (hours, parsed_success)。"""
+    if not text:
+        return 0.0, False
+    t = text.strip().lower()
+    # 区间: 10-15h, 10~15h, 10到15小时
+    range_match = re.search(r'(\d+(?:\.\d+)?)\s*[-~到至]\s*(\d+(?:\.\d+)?)[^\d]*(?:h|小时)', t)
+    if range_match:
+        low = float(range_match.group(1))
+        high = float(range_match.group(2))
+        return max((low + high) / 2.0, 0.0), True
+    # 单值: 10h, 每周10小时, 8h/week
+    single_match = re.search(r'(\d+(?:\.\d+)?)[^\d]*(?:h|小时)', t)
+    if single_match:
+        val = float(single_match.group(1))
+        return max(val, 0.0), True
+    return 0.0, False
+
+
+def calc_project_hours_per_week(start_time, end_time):
+    """根据项目起止时间计算周期和每周标准工时。无法计算时返回 None。"""
+    if not start_time or not end_time:
+        return None, None
+    try:
+        duration_days = (end_time - start_time).days
+        if duration_days <= 0:
+            return None, None
+        duration_weeks = math.ceil(duration_days / 7)
+        if duration_weeks <= 4:
+            hours = SHORT_PROJECT_HOURS
+        elif duration_weeks <= 12:
+            hours = MID_PROJECT_HOURS
+        else:
+            hours = LONG_PROJECT_HOURS
+        return duration_weeks, hours
+    except Exception:
+        return None, None
+
+
+def classify_match(student_hours: float, project_hours: float):
+    """计算匹配度及分档。失败返回(None, 'unknown', None)。"""
+    if project_hours is None or project_hours <= 0 or student_hours is None or student_hours < 0:
+        return None, 'unknown', None
+    if project_hours == 0:
+        return None, 'unknown', None
+    ratio = student_hours / project_hours
+    return round(ratio, 2)
 
 
 @api_view(['GET'])
@@ -311,6 +444,9 @@ def list_projects(request):
                 
                 # 获取技能列表
                 skills = student_skills_dict.get(post.post_id, [])
+
+                # 计算技能评分
+                score_payload = calculate_skill_score(skill.project_experience, skills)
                 
                 # 构建项目数据
                 project_data = {
@@ -324,6 +460,7 @@ def list_projects(request):
                     'create_time': post.create_time.isoformat() if post.create_time else None,
                     'major': directions,  # 专业方向列表
                     'skills': skills,  # 技能列表（包含技能名和熟练度）
+                    'skill_score': score_payload['total_score'],
                     'attachments': attachments_dict.get(post.post_id, [])  # 附件列表
                 }
             
@@ -522,6 +659,7 @@ def get_project_detail(request, post_id):
                 
                 # 获取该项目的技能
                 student_skills = StudentSkill.objects.filter(post=post).select_related('skill')
+                score_payload = calculate_skill_score(skill.project_experience, student_skills)
                 skills_list = [
                     {
                         'skill_name': ss.skill.skill_name,
@@ -542,7 +680,14 @@ def get_project_detail(request, post_id):
                     'filter': skill.filter,
                     'student_name': skill.student.student_name,
                     'student_user_id': StudentEntity.objects.get(student_id=skill.student_id).user_id,
-                    'tags': tags_list  # 添加标签列表
+                    'tags': tags_list,  # 添加标签列表
+                    'skill_score': score_payload['total_score'],
+                    'skill_score_detail': {
+                        'keyword_score': score_payload['keyword_score'],
+                        'proficiency_score': score_payload['proficiency_score'],
+                        'alpha': ALPHA_WEIGHT,
+                        'beta': BETA_WEIGHT
+                    }
                 })
             except SkillInformation.DoesNotExist:
                 return Response(
@@ -587,6 +732,65 @@ def get_project_detail(request, post_id):
             {'code': 500, 'msg': f'获取项目详情失败: {str(e)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+@api_view(['GET'])
+@login_required
+def time_match_overview(request):
+    """学生-教师项目的可投入时间匹配度概览。
+
+    GET /project/time-match
+    查询参数:
+    - post_id :学生发布的技能信息的 post_id （必填）
+
+    返回学生与该教师所有科研/竞赛项目的匹配度。
+    """
+    user = get_user_from_token(request)
+    post_id = request.GET.get('post_id', None)
+    if not post_id:
+        return Response({'code': 400, 'msg': '缺少必要参数 post_id'}, status=status.HTTP_400_BAD_REQUEST)
+    # 身份校验：教师只能查看自己的项目
+    if user.identity == 0:
+        return Response({'code': 403, 'msg': '无权查看时间匹配度'}, status=status.HTTP_403_FORBIDDEN)
+    
+    # 获取实体
+    try:
+        teacher = TeacherEntity.objects.get(user_id=user.user_id)
+    except TeacherEntity.DoesNotExist:
+        return Response({'code': 404, 'msg': '教师不存在'}, status=status.HTTP_404_NOT_FOUND)
+
+    # 学生可投入时间，取最近发布的个人技能记录
+    skill_info = SkillInformation.objects.filter(post_id=post_id).select_related('post').order_by('-post__create_time').first()
+    student_hours, parsed = parse_hours_per_week(skill_info.spend_time if skill_info else '')
+    if not parsed:
+        student_hours = None
+
+    projects = []
+
+    # 科研项目
+    research_list = ResearchProject.objects.filter(teacher_id=teacher.teacher_id).select_related('post')
+    for rp in research_list:
+        duration_weeks, project_hours = calc_project_hours_per_week(rp.starttime, rp.endtime)
+        match_ratio = classify_match(student_hours, project_hours)
+        projects.append({
+            'post_id': rp.post_id,
+            'title': rp.research_name,
+            'project_hours_per_week': project_hours,
+            'match_ratio': match_ratio
+        })
+
+    return Response(
+        {
+            'code': 200,
+            'msg': 'ok',
+            'data': {
+                'student_hours_per_week': student_hours,
+                'parsed': parsed,
+                'projects': projects
+            }
+        },
+        status=status.HTTP_200_OK
+    )
 
 
 def timestamp_to_datetime(timestamp_ms):

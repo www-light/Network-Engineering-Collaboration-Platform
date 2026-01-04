@@ -1,10 +1,10 @@
 from django.urls import path
 from .views import (
-    health_check, register, login, like, unlike, favorite, unfavorite, comment, list_comments,
+    health_check, register, login, user_profile, like, unlike, favorite, unfavorite, comment, list_comments,
     create_conversation, list_conversations, close_conversation,
     send_message, list_messages, auto_reply_settings,
     tags,
-    list_projects, get_project_detail,
+    list_projects, get_project_detail, time_match_overview,
     publish_research, publish_competition, publish_personal,
     upload_attachment, download_attachment
 )
@@ -19,6 +19,7 @@ urlpatterns = [
     path('health', health_check, name='health_check'),
     path('auth/register', register, name='register'),
     path('auth/login', login, name='login'),
+    path('auth/profile', user_profile, name='user_profile'),
     path('post/like', like, name='post_like'),
     path('post/unlike', unlike, name='post_unlike'),
     path('post/favorite', favorite, name='post_favorite'),
@@ -56,6 +57,7 @@ urlpatterns = [
     # 项目
     path('project/list', list_projects, name='list_projects'),  # 项目列表
     path('project/detail/<int:post_id>', get_project_detail, name='get_project_detail'),    # 项目详情
+    path('project/time-match', time_match_overview, name='time_match_overview'),    # 可投入时间匹配度
     
     # 项目发布接口
     path('publish/research', publish_research, name='publish_research'),   # 科研项目发布
