@@ -73,6 +73,15 @@ export const publishPersonal = (data) => {
   })
 }
 
+// 获取可投入时间匹配度
+export const getTimeMatch = (postId) => {
+  return request({
+    url: '/project/time-match',
+    method: 'GET',
+    params: { post_id: postId }
+  })
+}
+
 // 上传附件
 export const uploadAttachment = (postId, file) => {
   const formData = new FormData()

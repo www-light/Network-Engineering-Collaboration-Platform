@@ -98,6 +98,12 @@ class TeacherEntity(models.Model):
     )
     teacher_name = models.CharField(max_length=255, verbose_name='教师姓名')
     title = models.CharField(max_length=255, verbose_name='职称')
+    past_achievements = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='往期指导成果',
+        help_text='教师的过往指导成果、成就记录'
+    )
     
     class Meta:
         db_table = 'Teacher_entity'

@@ -108,15 +108,20 @@
                 type="textarea"
                 :rows="3"
                 placeholder="输入消息... (Ctrl+Enter发送)"
+                :disabled="isClosed"
                 @keyup.ctrl.enter="handleSend"
               />
               <div class="input-actions">
-                <div v-if="pendingFile" class="pending-file">
+                <div v-if="isClosed" class="closed-tip">
+                  <el-alert type="warning" :closable="false">会话已关闭，无法发送消息</el-alert>
+                </div>
+                <div v-else-if="pendingFile" class="pending-file">
                   <el-tag type="info" closable @close="clearPendingFile">
                     待发送文件：{{ pendingFile.original_filename || getFileNameFromUrl(pendingFile.download_url) }}
                   </el-tag>
                 </div>
                 <el-upload
+                  v-if="!isClosed"
                   ref="uploadRef"
                   class="file-upload"
                   action=""
@@ -130,7 +135,7 @@
                     </el-button>
                   </template>
                 </el-upload>
-                <el-button type="primary" @click="handleSend" :loading="sending">
+                <el-button type="primary" @click="handleSend" :loading="sending" :disabled="isClosed">
                   <el-icon><Promotion /></el-icon>
                   发送
                 </el-button>
@@ -172,19 +177,21 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch, nextTick } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { ref, onMounted, watch, nextTick, defineOptions } from 'vue'
+import { useRoute } from 'vue-router'
+
+defineOptions({ name: 'MessagePage' })
 import { useUserStore } from '@/store/user'
 import { getConversations, getMessages, sendMessage, closeConversation, uploadConversationFile, getAutoReplySettings, updateAutoReplySettings } from '@/api/conversation'
 import { Message, Close, Promotion, Setting, Upload } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
-const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
 
 const conversations = ref([])
 const selectedConversationId = ref(null)
+const currentConversation = ref(null)
 const loading = ref(false)
 const messages = ref([])
 const messagesLoading = ref(false)
@@ -196,6 +203,7 @@ const autoReplyDialogVisible = ref(false)
 const autoReplyEnabled = ref(false)
 const autoReplyMessage = ref('')
 const loadingAutoReply = ref(false)
+const isClosed = ref(false)
 
 onMounted(() => {
   loadConversations()
@@ -249,6 +257,8 @@ const loadMessages = async (silent = false) => {
 
 const handleConversationClick = (conv) => {
   selectedConversationId.value = conv.conversation_id
+  currentConversation.value = conv
+  isClosed.value = conv.status === '0'
 }
 
 const getOtherUserName = (conv) => {
@@ -319,9 +329,15 @@ const handleClose = async () => {
     })
     await closeConversation(selectedConversationId.value)
     ElMessage.success('对话已关闭')
-    selectedConversationId.value = null
-    messages.value = []
-    await loadConversations()
+    isClosed.value = true
+    if (currentConversation.value) {
+      currentConversation.value.status = '0'
+    }
+    // 更新会话列表中的状态
+    const conv = conversations.value.find(c => c.conversation_id === selectedConversationId.value)
+    if (conv) {
+      conv.status = '0'
+    }
   } catch (error) {
     if (error !== 'cancel') {
       ElMessage.error('操作失败')
