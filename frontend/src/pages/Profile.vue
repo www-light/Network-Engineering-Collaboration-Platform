@@ -163,20 +163,17 @@
 import { ref, onMounted } from 'vue'
 import { useUserStore } from '@/store/user'
 import { useRouter } from 'vue-router'
-import { User, Edit, Lock, CloseBold } from '@element-plus/icons-vue'
+import { User, Edit, Lock, CloseBold,Document, Close  } from '@element-plus/icons-vue'
 import { getUserProfile, updateUserProfile } from '@/api/auth'
 import { ElMessageBox, ElMessage } from 'element-plus'
+import { getProjects, getProjectDetail } from '@/api/project'
+import ProjectCard from '@/components/ProjectCard.vue'
+import ProjectDetail from '@/components/ProjectDetail.vue'
 
 // 定义组件名
 defineOptions({
   name: 'UserProfile'
 })
-import { User, Edit, Lock, Document, Close } from '@element-plus/icons-vue'
-import { ElMessageBox, ElMessage } from 'element-plus'
-import { getProjects, getProjectDetail } from '@/api/project'
-import { likePost, unlikePost, favoritePost, unfavoritePost, commentPost } from '@/api/post'
-import ProjectCard from '@/components/ProjectCard.vue'
-import ProjectDetail from '@/components/ProjectDetail.vue'
 
 const userStore = useUserStore()
 const router = useRouter()

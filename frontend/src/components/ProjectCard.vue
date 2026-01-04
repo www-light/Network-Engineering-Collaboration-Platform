@@ -127,6 +127,7 @@ const formatScore = (value) => {
   const num = Number(value)
   if (Number.isNaN(num)) return '--'
   return num.toFixed(2)
+}
 // 截断文本：显示前10个字母或5个汉字，超过则添加省略号
 const truncateText = (text) => {
   if (!text) return ''
