@@ -160,9 +160,12 @@ def list_projects(request):
     
     GET /project/list
     查询参数（可选）:
-    - post_type: 项目类型筛选 (research/competition/personal)
+    - post_type/project_type: 项目类型筛选 (research/competition/personal)
     - user_id: 用户ID筛选，只返回该用户发布的项目
     - search: 关键词搜索，在多个字段中进行模糊搜索
+    - tech_stack: 技术栈模糊筛选
+    - time_cycle: 时间周期筛选 lt3/lt6/lt12/gt12
+    - recruit_status: 招募状态 0-正在招募 1-招募截止
     - page: 页码，从1开始（默认：1）
     - page_size: 每页数量（默认：20）
     
@@ -197,8 +200,13 @@ def list_projects(request):
     try:
         # 获取筛选参数
         post_type_filter = request.GET.get('post_type', None)
+        # 同义词：project_type 等价于 post_type，便于前端传参
+        project_type_filter = request.GET.get('project_type', None)
         user_id_filter = request.GET.get('user_id', None)
         search_keyword = request.GET.get('search', None)
+        tech_stack_filter = request.GET.get('tech_stack', None)
+        time_cycle_filter = request.GET.get('time_cycle', None)
+        recruit_status_filter = request.GET.get('recruit_status', None)
         
         # 获取分页参数
         try:
@@ -218,6 +226,10 @@ def list_projects(request):
             'competition': 2,
             'personal': 3
         }
+
+        # 若传入 project_type，则作为 post_type 的同义词处理
+        if not post_type_filter and project_type_filter:
+            post_type_filter = project_type_filter
         
         # 获取当前用户（如果已登录）
         current_user = get_user_from_token(request)
@@ -292,6 +304,56 @@ def list_projects(request):
             except (ValueError, TypeError):
                 # user_id无效，忽略该筛选条件
                 pass
+
+        # 技术栈模糊筛选
+        if tech_stack_filter and tech_stack_filter.strip():
+            stack_kw = tech_stack_filter.strip()
+            posts_query = posts_query.filter(
+                poststack__stack__tech_stack__icontains=stack_kw
+            ).distinct()
+
+        # 招募状态筛选 0: 正在招募, 1: 招募截止
+        if recruit_status_filter in ['0', '1']:
+            posts_query = posts_query.filter(recruit_status=int(recruit_status_filter))
+
+        # 时间周期筛选（研究项目使用 start/end，竞赛项目使用距离截止的时间）
+        def _match_time_cycle(duration_days: int, cycle: str) -> bool:
+            if duration_days is None or duration_days <= 0:
+                return False
+            if cycle == 'lt3':
+                return duration_days <= 90
+            if cycle == 'lt6':
+                return duration_days <= 180
+            if cycle == 'lt12':
+                return duration_days <= 365
+            if cycle == 'gt12':
+                return duration_days > 365
+            return True
+
+        if time_cycle_filter and time_cycle_filter != 'all':
+            # 先取出当前筛选后的post列表以减少后续查询范围
+            post_rows = list(posts_query.values('post_id', 'post_type'))
+            research_ids = [p['post_id'] for p in post_rows if p['post_type'] == 1]
+            competition_ids = [p['post_id'] for p in post_rows if p['post_type'] == 2]
+
+            matched_ids = []
+
+            if research_ids:
+                for rp in ResearchProject.objects.filter(post_id__in=research_ids):
+                    if rp.starttime and rp.endtime:
+                        duration_days = (rp.endtime - rp.starttime).days
+                        if _match_time_cycle(duration_days, time_cycle_filter):
+                            matched_ids.append(rp.post_id)
+
+            if competition_ids:
+                now = timezone.now()
+                for cp in CompetitionProject.objects.filter(post_id__in=competition_ids):
+                    if cp.deadline:
+                        duration_days = (cp.deadline - now).days
+                        if _match_time_cycle(duration_days, time_cycle_filter):
+                            matched_ids.append(cp.post_id)
+
+            posts_query = posts_query.filter(post_id__in=matched_ids) if matched_ids else posts_query.none()
         
         # 如果有关键词搜索，进行多字段模糊搜索
         if search_keyword and search_keyword.strip():
