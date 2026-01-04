@@ -160,6 +160,7 @@ def list_projects(request):
     GET /project/list
     查询参数（可选）:
     - post_type: 项目类型筛选 (research/competition/personal)
+    - user_id: 用户ID筛选，只返回该用户发布的项目
     - page: 页码，从1开始（默认：1）
     - page_size: 每页数量（默认：20）
     
@@ -191,6 +192,7 @@ def list_projects(request):
     try:
         # 获取筛选参数
         post_type_filter = request.GET.get('post_type', None)
+        user_id_filter = request.GET.get('user_id', None)
         
         # 获取分页参数
         try:
@@ -237,6 +239,53 @@ def list_projects(request):
         # 如果有类型筛选，添加过滤条件
         if post_type_filter and post_type_filter in post_type_map:
             posts_query = posts_query.filter(post_type=post_type_map[post_type_filter])
+        
+        # 如果有用户ID筛选，添加过滤条件
+        if user_id_filter:
+            try:
+                user_id_int = int(user_id_filter)
+                # 获取该用户发布的所有项目post_id
+                # 对于科研项目和竞赛项目，通过TeacherEntity关联
+                # 对于个人技能项目，通过StudentEntity关联
+                teacher = TeacherEntity.objects.filter(user_id=user_id_int).first()
+                student = StudentEntity.objects.filter(user_id=user_id_int).first()
+                
+                user_post_ids = []
+                
+                if teacher:
+                    # 获取该教师发布的科研项目和竞赛项目
+                    research_posts = ResearchProject.objects.filter(teacher=teacher).values_list('post_id', flat=True)
+                    competition_posts = CompetitionProject.objects.filter(teacher=teacher).values_list('post_id', flat=True)
+                    user_post_ids.extend(research_posts)
+                    user_post_ids.extend(competition_posts)
+                
+                if student:
+                    # 获取该学生发布的个人技能项目
+                    skill_posts = SkillInformation.objects.filter(student=student).values_list('post_id', flat=True)
+                    user_post_ids.extend(skill_posts)
+                
+                # 如果用户没有发布任何项目，返回空结果
+                if not user_post_ids:
+                    return Response(
+                        {
+                            'code': 200,
+                            'msg': '获取成功',
+                            'data': {
+                                'items': [],
+                                'total': 0,
+                                'page': page,
+                                'page_size': page_size,
+                                'total_pages': 0
+                            }
+                        },
+                        status=status.HTTP_200_OK
+                    )
+                
+                # 筛选该用户发布的项目
+                posts_query = posts_query.filter(post_id__in=user_post_ids)
+            except (ValueError, TypeError):
+                # user_id无效，忽略该筛选条件
+                pass
         
         # 计算总数
         total = posts_query.count()
