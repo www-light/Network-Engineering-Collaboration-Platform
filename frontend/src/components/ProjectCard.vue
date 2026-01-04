@@ -11,6 +11,16 @@
             {{ getTypeName(project.post_type) }}
           </el-tag>
           <span class="title">{{ project.title }}</span>
+          <!-- 招募状态标签（仅科研和竞赛项目显示） -->
+          <el-tag 
+            v-if="(project.post_type === 'research' || project.post_type === 'competition') && project.recruit_status !== undefined"
+            :type="project.recruit_status === 0 ? 'success' : 'info'"
+            size="small"
+            effect="plain"
+            style="margin-left: 8px;"
+          >
+            {{ project.recruit_status === 0 ? '正在招募' : '招募截止' }}
+          </el-tag>
         </div>
         <div class="header-right">
           <!-- 科研项目：显示技术栈（完整字符串） -->

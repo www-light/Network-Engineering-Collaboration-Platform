@@ -31,6 +31,15 @@ class PostEntity(models.Model):
         ],
         default=0
     )
+    recruit_status = models.SmallIntegerField(
+        choices=[
+            (0, '正在招募'),
+            (1, '招募截止'),
+        ],
+        default=0,
+        verbose_name='招募状态',
+        help_text='招募状态: 0-正在招募, 1-招募截止'
+    )
     class Meta:
         db_table = 'Post_entity'
         verbose_name = '发布实体'

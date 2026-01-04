@@ -101,11 +101,13 @@
         :comment-loading="commentLoading"
         :show-actions="false"
         :readonly="true"
+        :allow-edit-recruit-status="true"
         @apply="handleApply"
         @message="handleMessage"
         @like="handleLike"
         @favorite="handleFavorite"
         @comment="handleComment"
+        @update:detail="handleDetailUpdate"
       />
     </el-dialog>
   </div>
@@ -225,6 +227,19 @@ const handleComment = () => {
   // 不执行任何操作，仅用于占位
   // 评论列表会从 ProjectDetail 组件内部通过 getComments 接口加载并显示
   return
+}
+
+// 处理详情更新（包括招募状态更新）
+const handleDetailUpdate = (updatedDetail) => {
+  currentDetail.value = updatedDetail
+  // 更新列表中的项目信息
+  const projectIndex = userProjects.value.findIndex(p => p.post_id === updatedDetail.post_id)
+  if (projectIndex !== -1) {
+    userProjects.value[projectIndex] = {
+      ...userProjects.value[projectIndex],
+      recruit_status: updatedDetail.recruit_status
+    }
+  }
 }
 
 const handleEdit = () => {

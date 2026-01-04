@@ -13,7 +13,7 @@ from .conversation import (
     auto_reply_settings
 )
 from .tag import tags
-from .project import list_projects, get_project_detail, publish_research, publish_competition, publish_personal
+from .project import list_projects, get_project_detail, update_recruit_status, publish_research, publish_competition, publish_personal
 from .attachment import upload_attachment, download_attachment
 
 __all__ = [
@@ -35,6 +35,7 @@ __all__ = [
     'tags',
     'list_projects',
     'get_project_detail',
+    'update_recruit_status',
     'publish_research',
     'publish_competition',
     'publish_personal',

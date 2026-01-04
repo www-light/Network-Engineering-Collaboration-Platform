@@ -4,7 +4,7 @@ from .views import (
     create_conversation, list_conversations, close_conversation,
     send_message, list_messages, auto_reply_settings,
     tags,
-    list_projects, get_project_detail,
+    list_projects, get_project_detail, update_recruit_status,
     publish_research, publish_competition, publish_personal,
     upload_attachment, download_attachment
 )
@@ -56,6 +56,7 @@ urlpatterns = [
     # 项目
     path('project/list', list_projects, name='list_projects'),  # 项目列表
     path('project/detail/<int:post_id>', get_project_detail, name='get_project_detail'),    # 项目详情
+    path('project/update-recruit-status/<int:post_id>', update_recruit_status, name='update_recruit_status'),  # 更新招募状态
     
     # 项目发布接口
     path('publish/research', publish_research, name='publish_research'),   # 科研项目发布

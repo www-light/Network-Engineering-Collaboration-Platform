@@ -275,7 +275,8 @@ def list_projects(request):
                     'comment_num': post.comment_num,
                     'create_time': post.create_time.isoformat() if post.create_time else None,
                     'tech_stack': tech_stack,  # 技术栈字符串
-                    'attachments': attachments_dict.get(post.post_id, [])  # 附件列表
+                    'attachments': attachments_dict.get(post.post_id, []),  # 附件列表
+                    'recruit_status': post.recruit_status  # 招募状态
                 }
             
             elif post.post_type == 2:  # 竞赛项目
@@ -296,7 +297,8 @@ def list_projects(request):
                     'favorite_num': post.favorite_num,
                     'comment_num': post.comment_num,
                     'create_time': post.create_time.isoformat() if post.create_time else None,
-                    'attachments': attachments_dict.get(post.post_id, [])  # 附件列表
+                    'attachments': attachments_dict.get(post.post_id, []),  # 附件列表
+                    'recruit_status': post.recruit_status  # 招募状态
                 }
             
             elif post.post_type == 3:  # 个人技能
@@ -324,7 +326,8 @@ def list_projects(request):
                     'create_time': post.create_time.isoformat() if post.create_time else None,
                     'major': directions,  # 专业方向列表
                     'skills': skills,  # 技能列表（包含技能名和熟练度）
-                    'attachments': attachments_dict.get(post.post_id, [])  # 附件列表
+                    'attachments': attachments_dict.get(post.post_id, []),  # 附件列表
+                    'recruit_status': post.recruit_status  # 招募状态（个人技能项目也有此字段，但通常不显示）
                 }
             
             # 如果无法获取项目信息，跳过
@@ -441,7 +444,8 @@ def get_project_detail(request, post_id):
             'comment_num': post.comment_num,
             'is_liked': is_liked,
             'is_favorited': is_favorited,
-            'create_time': post.create_time.isoformat() if post.create_time else None
+            'create_time': post.create_time.isoformat() if post.create_time else None,
+            'recruit_status': post.recruit_status  # 招募状态
         }
         
         if post.post_type == 1:  # 科研项目
@@ -1369,5 +1373,129 @@ def publish_personal(request):
     except Exception as e:
         return Response(
             {'code': 500, 'msg': f'发布失败: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@login_required
+def update_recruit_status(request, post_id):
+    """更新项目招募状态接口
+    
+    POST /project/update-recruit-status/<post_id>
+    请求头:
+    Authorization: Bearer <token>
+    
+    请求体:
+    {
+        "recruit_status": 0  # 0-正在招募, 1-招募截止
+    }
+    
+    返回:
+    {
+        "code": 200,
+        "msg": "更新成功",
+        "data": {
+            "post_id": 1,
+            "recruit_status": 0
+        }
+    }
+    """
+    try:
+        # 获取项目
+        try:
+            post = PostEntity.objects.get(post_id=post_id)
+        except PostEntity.DoesNotExist:
+            return Response(
+                {'code': 404, 'msg': '项目不存在'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # 验证用户必须是教师
+        user = request.user
+        if user.identity != 1:
+            return Response(
+                {'code': 403, 'msg': '只有教师可以更新招募状态'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # 验证项目类型必须是科研项目或竞赛项目
+        if post.post_type not in [1, 2]:  # 1=科研项目, 2=竞赛项目
+            return Response(
+                {'code': 400, 'msg': '只有科研项目和竞赛项目可以更新招募状态'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # 验证项目是否属于当前教师
+        if post.post_type == 1:  # 科研项目
+            try:
+                research = ResearchProject.objects.get(post=post)
+                teacher = TeacherEntity.objects.get(user=user)
+                if research.teacher != teacher:
+                    return Response(
+                        {'code': 403, 'msg': '无权修改其他教师的项目'},
+                        status=status.HTTP_403_FORBIDDEN
+                    )
+            except ResearchProject.DoesNotExist:
+                return Response(
+                    {'code': 404, 'msg': '科研项目信息不存在'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+        elif post.post_type == 2:  # 竞赛项目
+            try:
+                competition = CompetitionProject.objects.get(post=post)
+                teacher = TeacherEntity.objects.get(user=user)
+                if competition.teacher != teacher:
+                    return Response(
+                        {'code': 403, 'msg': '无权修改其他教师的项目'},
+                        status=status.HTTP_403_FORBIDDEN
+                    )
+            except CompetitionProject.DoesNotExist:
+                return Response(
+                    {'code': 404, 'msg': '竞赛项目信息不存在'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+        
+        # 获取并验证recruit_status
+        recruit_status = request.data.get('recruit_status')
+        if recruit_status is None:
+            return Response(
+                {'code': 400, 'msg': 'recruit_status参数不能为空'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            recruit_status = int(recruit_status)
+        except (ValueError, TypeError):
+            return Response(
+                {'code': 400, 'msg': 'recruit_status必须是整数'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if recruit_status not in [0, 1]:
+            return Response(
+                {'code': 400, 'msg': 'recruit_status值无效，应为0（正在招募）或1（招募截止）'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # 更新招募状态
+        post.recruit_status = recruit_status
+        post.save(update_fields=['recruit_status'])
+        
+        return Response(
+            {
+                'code': 200,
+                'msg': '更新成功',
+                'data': {
+                    'post_id': post.post_id,
+                    'recruit_status': post.recruit_status
+                }
+            },
+            status=status.HTTP_200_OK
+        )
+    
+    except Exception as e:
+        return Response(
+            {'code': 500, 'msg': f'更新失败: {str(e)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
