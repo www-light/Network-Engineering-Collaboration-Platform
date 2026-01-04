@@ -8,6 +8,7 @@ from pathlib import Path
 from django.conf import settings
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
+from django.utils import timezone
 from rest_framework.decorators import api_view, parser_classes
 from rest_framework.response import Response
 from rest_framework import status
@@ -173,14 +174,24 @@ def upload_attachment(request):
             )
         
         # 生成存储路径
-        # 格式：uploads/{post_type}/{post_id}/{uuid}.{ext}
+        # 项目附件：uploads/{post_type}/{year}/{uuid}.{ext}
+        # 会话/通用：uploads/public/{uuid}.{ext}
         file_ext = Path(original_filename).suffix
         file_uuid = str(uuid.uuid4())
+        current_year = timezone.now().year
+        current_month = timezone.now().month
+
         if post:
-            storage_dir = f"uploads/{post.post_type}/{post.post_id}"
+            if(post.post_type == 1):
+                post_type_str = 'research'
+            elif(post.post_type == 2):
+                post_type_str = 'competition'
+            else:
+                post_type_str = 'skill'
+            storage_dir = f"uploads/{post_type_str}/{current_year}/{current_month:02d}"
         else:
-            # 通用存储路径，按用户隔离
-            storage_dir = f"uploads/public/{user.user_id}"
+            storage_dir = f"uploads/public/{current_year}/{current_month:02d}"
+
         storage_filename = f"{file_uuid}{file_ext}"
         storage_path = os.path.join(storage_dir, storage_filename)
         
@@ -261,6 +272,7 @@ def download_attachment(request, file_id):
             )
         
         # 检查文件是否存在
+        print(attachment.storage_path)
         if not default_storage.exists(attachment.storage_path):
             return Response(
                 {'code': 404, 'msg': '文件不存在'},
