@@ -154,6 +154,18 @@ def classify_match(student_hours: float, project_hours: float):
     return round(ratio, 2)
 
 
+def get_teacher_success_stats(teacher_id: int) -> dict:
+    """计算教师的组队成功率，仅在学生端展示使用。"""
+    total = TeacherStudentCooperation.objects.filter(teacher_id=teacher_id).count()
+    approved = TeacherStudentCooperation.objects.filter(teacher_id=teacher_id, status=3).count()
+    success_rate = round(approved / total * 100, 2) if total > 0 else 0.0
+    return {
+        'teacher_success_rate': success_rate,
+        'teacher_total_cooperations': total,
+        'teacher_approved_cooperations': approved
+    }
+
+
 @api_view(['GET'])
 def list_projects(request):
     """获取项目列表接口（支持分页和关键词搜索）
@@ -621,9 +633,11 @@ def list_projects(request):
                     'major': directions,  # 专业方向列表
                     'skills': skills,  # 技能列表（包含技能名和熟练度）
                     'attachments': attachments_dict.get(post.post_id, []),  # 附件列表
-                    'recruit_status': post.recruit_status,  # 招募状态（个人技能项目也有此字段，但通常不显示）
-                    'skill_score': score_payload['total_score'],
+                    'recruit_status': post.recruit_status  # 招募状态（个人技能项目也有此字段，但通常不显示）
                 }
+                # 技能评分仅在学生端可见
+                if current_user_identity == 0:
+                    project_data['skill_score'] = score_payload['total_score']
             
             # 如果无法获取项目信息，跳过
             if not title or not publisher_name:
@@ -769,6 +783,9 @@ def get_project_detail(request, post_id):
                     'teacher_name': research.teacher.teacher_name,
                     'teacher_user_id': TeacherEntity.objects.get(teacher_id=research.teacher_id).user_id
                 })
+                # 教师组队成功率仅学生端可见
+                if current_user and getattr(current_user, 'identity', None) == 0:
+                    result.update(get_teacher_success_stats(research.teacher_id))
             except ResearchProject.DoesNotExist:
                 return Response(
                     {'code': 404, 'msg': '科研项目信息不存在'},
@@ -798,6 +815,9 @@ def get_project_detail(request, post_id):
                     'teacher_name': competition.teacher.teacher_name,
                     'teacher_user_id': TeacherEntity.objects.get(teacher_id=competition.teacher_id).user_id
                 })
+                # 教师组队成功率仅学生端可见
+                if current_user and getattr(current_user, 'identity', None) == 0:
+                    result.update(get_teacher_success_stats(competition.teacher_id))
             except CompetitionProject.DoesNotExist:
                 return Response(
                     {'code': 404, 'msg': '竞赛项目信息不存在'},
@@ -843,15 +863,17 @@ def get_project_detail(request, post_id):
                     'filter': skill.filter,
                     'student_name': skill.student.student_name,
                     'student_user_id': StudentEntity.objects.get(student_id=skill.student_id).user_id,
-                    'tags': tags_list,  # 添加标签列表
-                    'skill_score': score_payload['total_score'],
-                    'skill_score_detail': {
+                    'tags': tags_list  # 添加标签列表
+                })
+                # 技能评分仅学生端可见
+                if current_user and getattr(current_user, 'identity', None) == 0:
+                    result['skill_score'] = score_payload['total_score']
+                    result['skill_score_detail'] = {
                         'keyword_score': score_payload['keyword_score'],
                         'proficiency_score': score_payload['proficiency_score'],
                         'alpha': ALPHA_WEIGHT,
                         'beta': BETA_WEIGHT
                     }
-                })
             except SkillInformation.DoesNotExist:
                 return Response(
                     {'code': 404, 'msg': '个人技能信息不存在'},
