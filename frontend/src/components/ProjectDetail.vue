@@ -19,6 +19,14 @@
               >
                 {{ getRecruitStatusText }}
               </el-tag>
+              <!-- 技能评分标签（仅教师可见，个人技能项目） -->
+              <div 
+                v-if="!isStudent && detail.post_type === 'personal' && detail.skill_score !== undefined" 
+                class="score-pill"
+                style="margin-left: 12px;"
+              >
+                评分 {{ formatScore(detail.skill_score) }}
+              </div>
             </div>
             <div class="header-actions-section">
               <div v-if="showActions" class="header-actions">
@@ -177,9 +185,6 @@
               <el-descriptions-item label="专业方向">
                 {{ formatMajor(detail.major) }}
               </el-descriptions-item>
-              <el-descriptions-item v-if="isStudent && detail.skill_score !== undefined" label="技能评分">
-                {{ formatScore(detail.skill_score) }}
-              </el-descriptions-item>
               <el-descriptions-item label="技能" :span="2">
                 <div class="skills-list">
                   <el-tag
@@ -195,7 +200,20 @@
                 </div>
               </el-descriptions-item>
               <el-descriptions-item label="可投入时间" :span="2">
-                {{ detail.spend_time }}
+                <div class="spend-time-section">
+                  <span>{{ detail.spend_time }}</span>
+                  <!-- 可投入时间匹配度按钮（仅教师可见） -->
+                  <el-button
+                    v-if="isTeacher"
+                    type="success"
+                    size="small"
+                    @click="handleTimeMatch"
+                    style="margin-left: 12px;"
+                  >
+                    <el-icon><Clock /></el-icon>
+                    可投入时间匹配度
+                  </el-button>
+                </div>
               </el-descriptions-item>
               <!-- 项目经验独占一行，在可投入时间下面 -->
               <el-descriptions-item label="项目经验" :span="2">
@@ -271,15 +289,6 @@
           >
             {{ detail.is_favorited ? '已收藏' : '收藏' }}
             <span class="count">{{ detail.favorite_num || 0 }}</span>
-          </el-button>
-          <!-- 个人技能才显示时间匹配度按钮 -->
-          <el-button
-            v-if="detail.post_type === 'personal' && isTeacher"
-            type="success"
-            @click="handleTimeMatch"
-          >
-            <el-icon><Clock /></el-icon>
-            可投入时间匹配度
           </el-button>
         </div>
       </el-card>
@@ -1085,6 +1094,13 @@ const handleChangeRecruitStatus = async () => {
   gap: 4px;
 }
 
+.spend-time-section {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .directions-list {
   display: flex;
   flex-wrap: wrap;
@@ -1115,5 +1131,16 @@ const handleChangeRecruitStatus = async () => {
 
 .no-experience {
   color: #909399;
+}
+
+.score-pill {
+  background: #f0f9ff;
+  color: #409eff;
+  border: 1px solid #a0cfff;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 1;
+  display: inline-block;
 }
 </style>
