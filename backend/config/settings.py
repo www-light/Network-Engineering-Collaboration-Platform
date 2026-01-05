@@ -135,3 +135,6 @@ CORS_ALLOWED_ORIGINS = [
 
 CORS_ALLOW_CREDENTIALS = True
 
+# 消息加密配置
+# 注意：生产环境中请通过环境变量 MESSAGE_ENCRYPTION_KEY 设置真实的加密密钥
+MESSAGE_ENCRYPTION_KEY = os.getenv('MESSAGE_ENCRYPTION_KEY', 'miHYtq32TcZ5qDXdmrketEQdvuQLdpxkby9Zmun6ens=')

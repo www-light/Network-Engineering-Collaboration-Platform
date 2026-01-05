@@ -1,17 +1,69 @@
 """
 站内私信相关视图
 """
+import os
 from django.db import transaction
 from django.utils import timezone
 from django.db.models import Q
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
+from cryptography.fernet import Fernet
+from django.conf import settings
 
 from ..models.message import Conversation, Message
 from ..models.user import User,StudentEntity,TeacherEntity
 from ..models.post import PostEntity
 from ..utils.auth import login_required, check_conversation_permission
+
+
+# 消息加密工具类
+class MessageEncryptor:
+    """用Fernet对称加密处理消息内容"""
+    
+    def __init__(self):
+        # 从Django settings或环境变量获取加密密钥
+        self.key = getattr(settings, 'MESSAGE_ENCRYPTION_KEY', None) or os.environ.get('MESSAGE_ENCRYPTION_KEY')
+        if not self.key:
+            raise ValueError(
+                '未设置MESSAGE_ENCRYPTION_KEY。请在settings.py中设置MESSAGE_ENCRYPTION_KEY '
+                '或在环境变量中设置MESSAGE_ENCRYPTION_KEY'
+            )
+        
+        try:
+            self.cipher = Fernet(self.key.encode() if isinstance(self.key, str) else self.key)
+        except Exception as e:
+            raise ValueError(f'加密密钥格式不正确: {str(e)}')
+    
+    def encrypt(self, plaintext: str) -> str:
+        """加密消息内容"""
+        if not plaintext:
+            return ''
+        try:
+            encrypted = self.cipher.encrypt(plaintext.encode('utf-8'))
+            return encrypted.decode('utf-8')
+        except Exception as e:
+            raise ValueError(f'消息加密失败: {str(e)}')
+    
+    def decrypt(self, ciphertext: str) -> str:
+        """解密消息内容"""
+        if not ciphertext:
+            return ''
+        try:
+            decrypted = self.cipher.decrypt(ciphertext.encode('utf-8'))
+            return decrypted.decode('utf-8')
+        except Exception as e:
+            return ciphertext  # 解密失败时返回原文本（可能是未加密的旧数据）
+
+
+# 全局加密器实例
+_message_encryptor = None
+
+def get_message_encryptor():
+    global _message_encryptor
+    if _message_encryptor is None:
+        _message_encryptor = MessageEncryptor()
+    return _message_encryptor
 
 
 @api_view(['POST'])
@@ -240,12 +292,17 @@ def send_message(request, conversation_id):
     
     now = timezone.now()
     created_messages = []
+    encryptor = get_message_encryptor()
+    
+    # 加密消息内容
+    encrypted_content = encryptor.encrypt(content)
+    
     with transaction.atomic():
         user_msg = Message.objects.create(
             conversation=conversation,
             sender=sender,
             content_type=content_type,
-            content=content,
+            content=encrypted_content,  # 存储加密内容
             is_read=False,
             create_time=now
         )
@@ -254,11 +311,13 @@ def send_message(request, conversation_id):
         # 检查接收者的自动回复设置
         recipient = conversation.user2 if conversation.user1 == sender else conversation.user1
         if recipient.auto_reply_enabled and recipient.auto_reply_message:
+            # 自动回复也进行加密
+            encrypted_auto_reply = encryptor.encrypt(recipient.auto_reply_message)
             auto_msg = Message.objects.create(
                 conversation=conversation,
                 sender=recipient,
                 content_type=0,  # text type
-                content=recipient.auto_reply_message,
+                content=encrypted_auto_reply,  # 存储加密内容
                 is_read=False,
                 create_time=now
             )
@@ -269,6 +328,7 @@ def send_message(request, conversation_id):
         conversation.save(update_fields=['last_message_at'])
     
     # 返回本次产生的消息，便于前端即时渲染
+    # 注意：返回给前端时要解密内容
     return Response(
         {
             'messages': [
@@ -277,7 +337,7 @@ def send_message(request, conversation_id):
                     'conversation_id': m.conversation_id,
                     'sender_id': m.sender_id,
                     'content_type': str(m.content_type),
-                    'content': m.content,
+                    'content': encryptor.decrypt(m.content),  # 返回前解密
                     'is_read': m.is_read,
                     'create_time': m.create_time.isoformat()
                 }
@@ -353,6 +413,7 @@ def list_messages(request, conversation_id):
         'messages': []
     }
     
+    encryptor = get_message_encryptor()
     for msg in message_list:
         # 如果刚刚被标记为已读，更新返回值
         if msg.message_id in unread_ids:
@@ -362,7 +423,7 @@ def list_messages(request, conversation_id):
             'conversation_id': msg.conversation_id,
             'sender_id': msg.sender_id,
             'content_type': str(msg.content_type),
-            'content': msg.content,
+            'content': encryptor.decrypt(msg.content),  # 返回前解密
             'is_read': msg.is_read,
             'create_time': msg.create_time.isoformat()
         })
