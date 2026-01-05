@@ -92,8 +92,12 @@
         <div class="card-header">
           <h2>
             <el-icon><Document /></el-icon>
-            我发布的项目
+            {{ projectTab === 'my' ? '我发布的项目' : '收藏夹' }}
           </h2>
+          <el-radio-group v-model="projectTab" @change="handleTabChange" class="tab-switch">
+            <el-radio-button label="my">我的项目</el-radio-button>
+            <el-radio-button label="favorite">收藏夹</el-radio-button>
+          </el-radio-group>
         </div>
       </template>
       <div class="projects-content">
@@ -101,7 +105,7 @@
           <el-skeleton :rows="3" animated />
         </div>
         <div v-else-if="userProjects.length === 0" class="empty-container">
-          <el-empty description="暂无发布的项目" :image-size="100" />
+          <el-empty :description="projectTab === 'my' ? '暂无发布的项目' : '暂无收藏的项目'" :image-size="100" />
         </div>
         <div v-else class="projects-list">
           <ProjectCard
@@ -145,9 +149,9 @@
         :like-loading="likeLoading"
         :favorite-loading="favoriteLoading"
         :comment-loading="commentLoading"
-        :show-actions="false"
-        :readonly="true"
-        :allow-edit-recruit-status="true"
+        :show-actions="projectTab === 'favorite'"
+        :readonly="projectTab === 'my'"
+        :allow-edit-recruit-status="projectTab === 'my'"
         @apply="handleApply"
         @message="handleMessage"
         @like="handleLike"
@@ -167,6 +171,7 @@ import { User, Edit, Lock, CloseBold,Document, Close  } from '@element-plus/icon
 import { getUserProfile, updateUserProfile } from '@/api/auth'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { getProjects, getProjectDetail } from '@/api/project'
+import { likePost, unlikePost, favoritePost, unfavoritePost, commentPost, getComments } from '@/api/post'
 import ProjectCard from '@/components/ProjectCard.vue'
 import ProjectDetail from '@/components/ProjectDetail.vue'
 
@@ -192,6 +197,7 @@ const detailLoading = ref(false)
 const likeLoading = ref(false)
 const favoriteLoading = ref(false)
 const commentLoading = ref(false)
+const projectTab = ref('my') // 'my' 表示我的项目，'favorite' 表示收藏夹
 
 const gradeMap = {
   1: '大一',
@@ -266,11 +272,21 @@ const loadUserProjects = async () => {
   
   projectsLoading.value = true
   try {
-    const response = await getProjects({
-      user_id: userStore.userInfo.user_id,
+    const params = {
       page: 1,
       page_size: 100
-    })
+    }
+    
+    // 根据当前选中的标签页决定加载哪种项目
+    if (projectTab.value === 'my') {
+      // 加载我发布的项目
+      params.user_id = userStore.userInfo.user_id
+    } else {
+      // 加载收藏的项目
+      params.favorite = 'true'
+    }
+    
+    const response = await getProjects(params)
     
     if (response.code === 200 && response.data) {
       userProjects.value = response.data.items || []
@@ -285,6 +301,11 @@ const loadUserProjects = async () => {
   } finally {
     projectsLoading.value = false
   }
+}
+
+// 切换标签页
+const handleTabChange = () => {
+  loadUserProjects()
 }
 
 // 点击项目卡片
@@ -330,28 +351,107 @@ const handleMessage = () => {
   ElMessage.info('私信功能')
 }
 
-// 点赞（只显示数据，不执行操作）
-// 点赞数和收藏数已从 getProjectDetail 接口获取并显示在 currentDetail 中
-const handleLike = () => {
-  // 不执行任何操作，仅用于占位
-  // 点赞数和收藏数会从 currentDetail.value.like_num 和 currentDetail.value.favorite_num 中显示
-  return
+// 确保用户已登录
+const ensureLoggedIn = () => {
+  if (!userStore.userInfo?.user_id) {
+    ElMessage.warning('请先登录')
+    router.push('/login')
+    return false
+  }
+  return true
 }
 
-// 收藏（只显示数据，不执行操作）
-// 点赞数和收藏数已从 getProjectDetail 接口获取并显示在 currentDetail 中
-const handleFavorite = () => {
-  // 不执行任何操作，仅用于占位
-  // 点赞数和收藏数会从 currentDetail.value.like_num 和 currentDetail.value.favorite_num 中显示
-  return
+// 点赞
+const handleLike = async () => {
+  if (!ensureLoggedIn() || !currentDetail.value) return
+  
+  likeLoading.value = true
+  try {
+    if (currentDetail.value.is_liked) {
+      await unlikePost({ post_id: currentDetail.value.post_id })
+      currentDetail.value.is_liked = false
+      currentDetail.value.like_num = Math.max(0, (currentDetail.value.like_num || 0) - 1)
+      ElMessage.success('取消点赞成功')
+    } else {
+      await likePost({ post_id: currentDetail.value.post_id })
+      currentDetail.value.is_liked = true
+      currentDetail.value.like_num = (currentDetail.value.like_num || 0) + 1
+      ElMessage.success('点赞成功')
+    }
+  } catch (error) {
+    ElMessage.error(currentDetail.value.is_liked ? '取消点赞失败' : '点赞失败')
+    console.error(error)
+  } finally {
+    likeLoading.value = false
+  }
 }
 
-// 评论（只显示评论内容，不执行评论操作）
-// 评论内容已从 getProjectDetail 接口获取并显示在 currentDetail 中
-const handleComment = () => {
-  // 不执行任何操作，仅用于占位
-  // 评论列表会从 ProjectDetail 组件内部通过 getComments 接口加载并显示
-  return
+// 收藏
+const handleFavorite = async () => {
+  if (!ensureLoggedIn() || !currentDetail.value) return
+  
+  favoriteLoading.value = true
+  try {
+    if (currentDetail.value.is_favorited) {
+      await unfavoritePost({ post_id: currentDetail.value.post_id })
+      currentDetail.value.is_favorited = false
+      currentDetail.value.favorite_num = Math.max(0, (currentDetail.value.favorite_num || 0) - 1)
+      ElMessage.success('取消收藏成功')
+      
+      // 如果在收藏夹中取消收藏，从列表中移除该项目
+      if (projectTab.value === 'favorite') {
+        userProjects.value = userProjects.value.filter(
+          p => p.post_id !== currentDetail.value.post_id
+        )
+      }
+    } else {
+      await favoritePost({ post_id: currentDetail.value.post_id })
+      currentDetail.value.is_favorited = true
+      currentDetail.value.favorite_num = (currentDetail.value.favorite_num || 0) + 1
+      ElMessage.success('收藏成功')
+    }
+  } catch (error) {
+    ElMessage.error(currentDetail.value.is_favorited ? '取消收藏失败' : '收藏失败')
+    console.error(error)
+  } finally {
+    favoriteLoading.value = false
+  }
+}
+
+// 评论
+const handleComment = async (commentText) => {
+  if (!ensureLoggedIn() || !currentDetail.value || !commentText) return
+  
+  commentLoading.value = true
+  try {
+    await commentPost({
+      post_id: currentDetail.value.post_id,
+      comment: commentText
+    })
+    ElMessage.success('评论成功')
+    
+    // 先更新评论数，这会触发ProjectDetail组件的watch，自动刷新评论列表
+    const oldCommentNum = currentDetail.value.comment_num || 0
+    currentDetail.value.comment_num = oldCommentNum + 1
+    
+    // 延迟重新获取项目详情，确保评论已经保存到数据库
+    // 这样可以获取最新的评论列表，包括刚提交的评论
+    setTimeout(async () => {
+      try {
+        const response = await getProjectDetail(currentDetail.value.post_id)
+        if (response.code === 200 && response.data) {
+          currentDetail.value = response.data
+        }
+      } catch (error) {
+        console.error('刷新评论列表失败:', error)
+      }
+    }, 500)
+  } catch (error) {
+    ElMessage.error('评论失败')
+    console.error(error)
+  } finally {
+    commentLoading.value = false
+  }
 }
 
 // 处理详情更新（包括招募状态更新）
@@ -412,6 +512,7 @@ onMounted(() => {
 .card-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
 }
 
@@ -419,6 +520,10 @@ onMounted(() => {
   margin: 0;
   color: #303133;
   font-size: 20px;
+}
+
+.tab-switch {
+  margin-left: auto;
 }
 
 .profile-content {

@@ -162,6 +162,7 @@ def list_projects(request):
     查询参数（可选）:
     - post_type/project_type: 项目类型筛选 (research/competition/personal)
     - user_id: 用户ID筛选，只返回该用户发布的项目
+    - favorite: 是否只返回当前用户收藏的项目 (true/false)，需要登录
     - search: 关键词搜索，在多个字段中进行模糊搜索
     - tech_stack: 技术栈模糊筛选
     - time_cycle: 时间周期筛选 lt3/lt6/lt12/gt12
@@ -203,6 +204,7 @@ def list_projects(request):
         # 同义词：project_type 等价于 post_type，便于前端传参
         project_type_filter = request.GET.get('project_type', None)
         user_id_filter = request.GET.get('user_id', None)
+        favorite_filter = request.GET.get('favorite', None)
         search_keyword = request.GET.get('search', None)
         tech_stack_filter = request.GET.get('tech_stack', None)
         time_cycle_filter = request.GET.get('time_cycle', None)
@@ -240,16 +242,74 @@ def list_projects(request):
         # 构建查询
         posts_query = PostEntity.objects.all().order_by('-create_time')
         
+        # 如果请求收藏项目列表，需要用户登录
+        if favorite_filter and favorite_filter.lower() == 'true':
+            if not current_user:
+                return Response(
+                    {'code': 401, 'msg': '需要登录才能查看收藏项目'},
+                    status=status.HTTP_401_UNAUTHORIZED
+                )
+            # 获取当前用户收藏的所有项目post_id
+            favorite_post_ids = list(Favorite.objects.filter(user=current_user).values_list('post_id', flat=True))
+            if not favorite_post_ids:
+                # 如果用户没有收藏任何项目，直接返回空结果
+                return Response(
+                    {
+                        'code': 200,
+                        'msg': '获取成功',
+                        'data': {
+                            'items': [],
+                            'total': 0,
+                            'page': page,
+                            'page_size': page_size,
+                            'total_pages': 0
+                        }
+                    },
+                    status=status.HTTP_200_OK
+                )
+            # 只查询收藏的项目
+            posts_query = posts_query.filter(post_id__in=favorite_post_ids)
+        
         # 根据可见权限过滤
         # visibility: 0=公开（所有人可见）, 1=仅教师可见, 2=仅学生可见
-        if current_user_identity is not None:
-            # 如果用户已登录，根据身份和可见权限过滤
+        if current_user_identity is not None and current_user:
+            # 如果用户已登录，获取当前用户发布的所有项目ID
+            # 发布者可以看到自己发布的所有项目，无论权限如何
+            current_user_post_ids = []
+            try:
+                if current_user_identity == 1:  # 教师
+                    teacher = TeacherEntity.objects.filter(user_id=current_user.user_id).first()
+                    if teacher:
+                        research_posts = list(ResearchProject.objects.filter(teacher=teacher).values_list('post_id', flat=True))
+                        competition_posts = list(CompetitionProject.objects.filter(teacher=teacher).values_list('post_id', flat=True))
+                        current_user_post_ids.extend(research_posts)
+                        current_user_post_ids.extend(competition_posts)
+                elif current_user_identity == 0:  # 学生
+                    student = StudentEntity.objects.filter(user_id=current_user.user_id).first()
+                    if student:
+                        skill_posts = list(SkillInformation.objects.filter(student=student).values_list('post_id', flat=True))
+                        current_user_post_ids.extend(skill_posts)
+            except Exception as e:
+                # 如果获取失败，不影响主流程
+                pass
+            
+            # 使用Q对象：发布者可以看到自己发布的所有项目，或者符合权限规则的项目
             if current_user_identity == 0:  # 学生
-                # 学生可以看到：公开(0)和仅学生可见(2)的项目
-                posts_query = posts_query.filter(visibility__in=[0, 2])
+                # 学生可以看到：自己发布的所有项目，或者公开(0)和仅学生可见(2)的项目
+                if current_user_post_ids:
+                    posts_query = posts_query.filter(
+                        Q(post_id__in=current_user_post_ids) | Q(visibility__in=[0, 2])
+                    )
+                else:
+                    posts_query = posts_query.filter(visibility__in=[0, 2])
             elif current_user_identity == 1:  # 教师
-                # 教师可以看到：公开(0)和仅教师可见(1)的项目
-                posts_query = posts_query.filter(visibility__in=[0, 1])
+                # 教师可以看到：自己发布的所有项目，或者公开(0)和仅教师可见(1)的项目
+                if current_user_post_ids:
+                    posts_query = posts_query.filter(
+                        Q(post_id__in=current_user_post_ids) | Q(visibility__in=[0, 1])
+                    )
+                else:
+                    posts_query = posts_query.filter(visibility__in=[0, 1])
         else:
             # 未登录用户只能看到公开的项目
             posts_query = posts_query.filter(visibility=0)
@@ -634,6 +694,7 @@ def get_project_detail(request, post_id):
             "team_require": "团队要求",
             "guide_way": "指导方式",
             "reward": "奖励",
+            "teacher_user_id": 1,
             # 个人技能 (personal):
             "major": "专业",
             "skill": "技能",

@@ -414,11 +414,47 @@ const getRecruitStatusType = computed(() => {
 })
 
 // 监听detail变化，加载评论
-watch(() => props.detail?.post_id, (postId) => {
-  if (postId) {
+watch(() => props.detail?.post_id, (postId, oldPostId) => {
+  if (postId && postId !== oldPostId) {
     loadComments()
   }
 }, { immediate: true })
+
+// 用于防止重复刷新的标志
+let isRefreshingComments = false
+
+// 监听comment_num变化，刷新评论列表（用于评论提交后自动刷新）
+watch(() => props.detail?.comment_num, (newVal, oldVal) => {
+  // 当comment_num增加时（说明有新评论），重新加载评论列表
+  if (newVal !== undefined && oldVal !== undefined && newVal > oldVal && props.detail?.post_id) {
+    if (!isRefreshingComments) {
+      isRefreshingComments = true
+      // 延迟一点时间，确保后端已经保存了评论
+      setTimeout(() => {
+        loadComments()
+        isRefreshingComments = false
+      }, 300)
+    }
+  }
+})
+
+// 监听整个detail对象的变化，如果detail对象被替换（比如重新获取详情），也刷新评论列表
+watch(() => props.detail, (newDetail, oldDetail) => {
+  // 如果detail对象被替换且post_id相同，说明可能是重新获取了详情，需要刷新评论列表
+  if (newDetail?.post_id && oldDetail?.post_id && 
+      newDetail.post_id === oldDetail.post_id && 
+      newDetail !== oldDetail) {
+    // 检查comment_num是否有变化，如果有变化则刷新
+    // 使用setTimeout避免与comment_num的watch重复触发
+    if (newDetail.comment_num !== oldDetail.comment_num && !isRefreshingComments) {
+      isRefreshingComments = true
+      setTimeout(() => {
+        loadComments()
+        isRefreshingComments = false
+      }, 100)
+    }
+  }
+}, { deep: false })
 
 onMounted(() => {
   if (props.detail?.post_id) {

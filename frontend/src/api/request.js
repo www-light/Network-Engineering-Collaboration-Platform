@@ -43,6 +43,11 @@ service.interceptors.response.use(
     
     // 如果返回的code不是200，则视为错误
     if (res.code !== 200) {
+      // 对于登录接口的账号不存在错误，不在这里显示消息，让store中的loginUser处理
+      const isLoginError = response.config?.url?.includes('/auth/login')
+      if (isLoginError && (res.msg?.includes('请先注册') || res.msg?.includes('不存在'))) {
+        return Promise.reject(new Error(res.msg || '请先注册'))
+      }
       ElMessage.error(res.msg || '请求失败')
       return Promise.reject(new Error(res.msg || '请求失败'))
     }
@@ -54,6 +59,14 @@ service.interceptors.response.use(
   (error) => {
     console.error('Response error:', error)
     const message = error.response?.data?.msg || error.message || '请求失败'
+    
+    // 对于登录接口的账号不存在错误，不在这里显示消息，让store中的loginUser处理
+    const isLoginError = error.config?.url?.includes('/auth/login')
+    if (isLoginError && (message.includes('请先注册') || message.includes('不存在'))) {
+      // 不显示消息，直接返回错误
+      return Promise.reject(error)
+    }
+    
     ElMessage.error(message)
     
     // 401未授权，清除token并跳转登录

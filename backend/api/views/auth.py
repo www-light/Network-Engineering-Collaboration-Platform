@@ -80,7 +80,41 @@ def login(request):
         })
         return Response(response_serializer.data, status=status.HTTP_200_OK)
     
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    # 处理验证错误，统一返回格式
+    errors = serializer.errors
+    # 检查是否是账号不存在的情况
+    if 'account' in errors:
+        account_error = errors.get('account', [])
+        if isinstance(account_error, list):
+            account_error = account_error[0] if account_error else ''
+        elif isinstance(account_error, str):
+            pass
+        else:
+            account_error = str(account_error)
+        
+        # 如果错误信息包含"不存在"，返回"请先注册"
+        if '不存在' in account_error:
+            return Response({
+                'code': 400,
+                'msg': '请先注册'
+            }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # 其他错误，返回统一格式
+    error_msg = ''
+    if isinstance(errors, dict):
+        # 提取第一个错误信息
+        for field, field_errors in errors.items():
+            if isinstance(field_errors, list):
+                error_msg = field_errors[0] if field_errors else ''
+            else:
+                error_msg = str(field_errors)
+            if error_msg:
+                break
+    
+    return Response({
+        'code': 400,
+        'msg': error_msg or '登录失败'
+    }, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET', 'PUT'])

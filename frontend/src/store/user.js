@@ -30,7 +30,13 @@ export const useUserStore = defineStore('user', () => {
       ElMessage.success('登录成功')
       return response
     } catch (error) {
-      ElMessage.error('登录失败')
+      // 检查是否是账号不存在的情况
+      const errorMsg = error.response?.data?.msg || error.message || ''
+      if (errorMsg.includes('请先注册') || errorMsg.includes('不存在')) {
+        ElMessage.warning('请先注册')
+      } else {
+        ElMessage.error(errorMsg || '登录失败')
+      }
       throw error
     }
   }
