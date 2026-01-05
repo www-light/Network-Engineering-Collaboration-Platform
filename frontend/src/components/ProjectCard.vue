@@ -47,7 +47,7 @@
               {{ truncateText(skill.skill_name + '(' + (skill.skill_degree === 'skillful' ? '熟练' : '了解') + ')') }}
             </el-tag>
           </div>
-          <div v-if="project.post_type === 'personal' && project.skill_score !== undefined" class="score-pill">
+          <div v-if="isStudent && project.post_type === 'personal' && project.skill_score !== undefined" class="score-pill">
             评分 {{ formatScore(project.skill_score) }}
           </div>
         </div>
@@ -86,6 +86,10 @@
 
 <script setup>
 import { User, Star, Collection, ChatLineRound, Document } from '@element-plus/icons-vue'
+import { useUserStore } from '@/store/user'
+
+const userStore = useUserStore()
+const isStudent = userStore.isStudent
 
 defineProps({
   project: {

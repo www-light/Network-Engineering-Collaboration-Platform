@@ -7,7 +7,7 @@ from ..serializers import (
     RegisterResponseSerializer,
     LoginResponseSerializer
 )
-from ..models import StudentEntity, TeacherEntity, User, TeacherStudentCooperation
+from ..models import StudentEntity, TeacherEntity, User
 from ..utils.auth import login_required, get_user_from_token
 from django.db.models import Q, Count
 
@@ -80,41 +80,7 @@ def login(request):
         })
         return Response(response_serializer.data, status=status.HTTP_200_OK)
     
-    # 处理验证错误，统一返回格式
-    errors = serializer.errors
-    # 检查是否是账号不存在的情况
-    if 'account' in errors:
-        account_error = errors.get('account', [])
-        if isinstance(account_error, list):
-            account_error = account_error[0] if account_error else ''
-        elif isinstance(account_error, str):
-            pass
-        else:
-            account_error = str(account_error)
-        
-        # 如果错误信息包含"不存在"，返回"请先注册"
-        if '不存在' in account_error:
-            return Response({
-                'code': 400,
-                'msg': '请先注册'
-            }, status=status.HTTP_400_BAD_REQUEST)
-    
-    # 其他错误，返回统一格式
-    error_msg = ''
-    if isinstance(errors, dict):
-        # 提取第一个错误信息
-        for field, field_errors in errors.items():
-            if isinstance(field_errors, list):
-                error_msg = field_errors[0] if field_errors else ''
-            else:
-                error_msg = str(field_errors)
-            if error_msg:
-                break
-    
-    return Response({
-        'code': 400,
-        'msg': error_msg or '登录失败'
-    }, status=status.HTTP_400_BAD_REQUEST)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET', 'PUT'])
@@ -157,21 +123,6 @@ def user_profile(request):
         else:  # 教师
             try:
                 teacher = TeacherEntity.objects.get(user_id=user.user_id)
-                # 计算组队成功率：该教师参与的所有协作中，已确认(status=3)的占比
-                total_cooperations = TeacherStudentCooperation.objects.filter(
-                    teacher_id=teacher.teacher_id
-                ).count()
-                
-                # 同意的合作（status=3）
-                approved_cooperations = TeacherStudentCooperation.objects.filter(
-                    teacher_id=teacher.teacher_id,
-                    status=3
-                ).count()
-                
-                success_rate = 0.0
-                if total_cooperations > 0:
-                    success_rate = round(approved_cooperations / total_cooperations * 100, 2)
-                
                 return Response({
                     'code': 200,
                     'data': {
@@ -181,9 +132,6 @@ def user_profile(request):
                         'account': teacher.teacher_id,
                         'title': teacher.title,
                         'past_achievements': teacher.past_achievements or '',
-                        'success_rate': success_rate,
-                        'total_cooperations': total_cooperations,
-                        'approved_cooperations': approved_cooperations,
                         'extra': {'title': teacher.title}
                     }
                 }, status=status.HTTP_200_OK)
@@ -208,19 +156,6 @@ def user_profile(request):
                     teacher.past_achievements = request.data.get('past_achievements', '')
                     teacher.save()
                 
-                # 计算组队成功率
-                total_cooperations = TeacherStudentCooperation.objects.filter(
-                    teacher_id=teacher.teacher_id
-                ).count()
-                approved_cooperations = TeacherStudentCooperation.objects.filter(
-                    teacher_id=teacher.teacher_id,
-                    status=3
-                ).count()
-                
-                success_rate = 0.0
-                if total_cooperations > 0:
-                    success_rate = round(approved_cooperations / total_cooperations * 100, 2)
-                
                 return Response({
                     'code': 200,
                     'msg': '更新成功',
@@ -230,10 +165,7 @@ def user_profile(request):
                         'name': teacher.teacher_name,
                         'account': teacher.teacher_id,
                         'title': teacher.title,
-                        'past_achievements': teacher.past_achievements or '',
-                        'success_rate': success_rate,
-                        'total_cooperations': total_cooperations,
-                        'approved_cooperations': approved_cooperations
+                        'past_achievements': teacher.past_achievements or ''
                     }
                 }, status=status.HTTP_200_OK)
             except TeacherEntity.DoesNotExist:

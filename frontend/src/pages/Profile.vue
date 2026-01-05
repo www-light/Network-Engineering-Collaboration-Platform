@@ -39,7 +39,7 @@
               <el-descriptions-item label="职称">
                 {{ profileData?.extra?.title }}
               </el-descriptions-item>
-              <el-descriptions-item label="组队成功率">
+              <el-descriptions-item v-if="isStudent" label="组队成功率">
                 <el-progress 
                   :percentage="profileData?.success_rate || 0"
                   :color="getSuccessRateColor(profileData?.success_rate)"
@@ -164,7 +164,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useUserStore } from '@/store/user'
 import { useRouter } from 'vue-router'
 import { User, Edit, Lock, CloseBold,Document, Close  } from '@element-plus/icons-vue'
@@ -182,6 +182,7 @@ defineOptions({
 
 const userStore = useUserStore()
 const router = useRouter()
+const isStudent = computed(() => userStore.userInfo?.identity === 0)
 
 const profileData = ref(null)
 const loading = ref(false)

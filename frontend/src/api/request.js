@@ -62,8 +62,8 @@ service.interceptors.response.use(
     
     // 对于登录接口的账号不存在错误，不在这里显示消息，让store中的loginUser处理
     const isLoginError = error.config?.url?.includes('/auth/login')
-    if (isLoginError && (message.includes('请先注册') || message.includes('不存在'))) {
-      // 不显示消息，直接返回错误
+    if (isLoginError) {
+      // 登录错误统一交给 loginUser 捕获处理，避免重复提示
       return Promise.reject(error)
     }
     

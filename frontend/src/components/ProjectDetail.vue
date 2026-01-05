@@ -89,6 +89,20 @@
               <el-descriptions-item label="联系方式" :span="2">
                 {{ detail.contact }}
               </el-descriptions-item>
+              <el-descriptions-item
+                v-if="isStudent && detail.teacher_success_rate !== undefined"
+                label="组队成功率"
+                :span="2"
+              >
+                <el-progress
+                  :percentage="detail.teacher_success_rate || 0"
+                  :color="getSuccessRateColor(detail.teacher_success_rate)"
+                  :stroke-width="8"
+                />
+                <span class="stat-text">
+                  {{ detail.teacher_approved_cooperations || 0 }}/{{ detail.teacher_total_cooperations || 0 }}
+                </span>
+              </el-descriptions-item>
               <el-descriptions-item v-if="detail.attachments && detail.attachments.length > 0" label="附件" :span="2">
                 <div class="attachments-list">
                   <div
@@ -125,6 +139,20 @@
               <el-descriptions-item label="奖励" :span="2">
                 {{ detail.reward }}
               </el-descriptions-item>
+              <el-descriptions-item
+                v-if="isStudent && detail.teacher_success_rate !== undefined"
+                label="组队成功率"
+                :span="2"
+              >
+                <el-progress
+                  :percentage="detail.teacher_success_rate || 0"
+                  :color="getSuccessRateColor(detail.teacher_success_rate)"
+                  :stroke-width="8"
+                />
+                <span class="stat-text">
+                  {{ detail.teacher_approved_cooperations || 0 }}/{{ detail.teacher_total_cooperations || 0 }}
+                </span>
+              </el-descriptions-item>
               <el-descriptions-item v-if="detail.attachments && detail.attachments.length > 0" label="附件" :span="2">
                 <div class="attachments-list">
                   <div
@@ -149,7 +177,7 @@
               <el-descriptions-item label="专业方向">
                 {{ formatMajor(detail.major) }}
               </el-descriptions-item>
-              <el-descriptions-item v-if="detail.skill_score !== undefined" label="技能评分">
+              <el-descriptions-item v-if="isStudent && detail.skill_score !== undefined" label="技能评分">
                 {{ formatScore(detail.skill_score) }}
               </el-descriptions-item>
               <el-descriptions-item label="技能" :span="2">
@@ -337,6 +365,7 @@ const comments = ref([])
 const commentsLoading = ref(false)
 const recruitStatusLoading = ref(false)
 const isTeacher = computed(() => userStore.userInfo?.identity === 1)
+const isStudent = computed(() => userStore.userInfo?.identity === 0)
 
 const props = defineProps({
   detail: {
@@ -618,6 +647,13 @@ const formatScore = (value) => {
   const num = Number(value)
   if (Number.isNaN(num)) return '--'
   return num.toFixed(2)
+}
+
+const getSuccessRateColor = (rate) => {
+  const value = Number(rate) || 0
+  if (value >= 80) return '#67C23A'
+  if (value >= 50) return '#E6A23C'
+  return '#F56C6C'
 }
 
 const handleTimeMatch = async () => {
@@ -1034,6 +1070,12 @@ const handleChangeRecruitStatus = async () => {
 .no-tags {
   color: #909399;
   font-size: 14px;
+}
+
+.stat-text {
+  margin-left: 8px;
+  color: #606266;
+  font-size: 12px;
 }
 
 .skills-list {

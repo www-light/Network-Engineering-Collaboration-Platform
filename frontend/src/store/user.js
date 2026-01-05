@@ -30,12 +30,19 @@ export const useUserStore = defineStore('user', () => {
       ElMessage.success('登录成功')
       return response
     } catch (error) {
-      // 检查是否是账号不存在的情况
-      const errorMsg = error.response?.data?.msg || error.message || ''
-      if (errorMsg.includes('请先注册') || errorMsg.includes('不存在')) {
-        ElMessage.warning('请先注册')
+      const errData = error.response?.data || {}
+      const status = error.response?.status
+
+      // 优先读取后端的错误提示（serializer.errors可能返回对象或数组）
+      const nonFieldError = Array.isArray(errData.non_field_errors) ? errData.non_field_errors[0] : null
+      const accountError = Array.isArray(errData.account) ? errData.account[0] : null
+      const msg = errData.msg || nonFieldError || accountError || errData.detail || error.message || ''
+
+      if (status === 400) {
+        // 账号不存在或密码错误等登录失败场景
+        ElMessage.error(msg || '账号不存在或密码错误')
       } else {
-        ElMessage.error(errorMsg || '登录失败')
+        ElMessage.error(msg || '登录失败')
       }
       throw error
     }
