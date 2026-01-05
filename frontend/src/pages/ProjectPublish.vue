@@ -248,8 +248,20 @@
           <div class="visibility-container">
             <el-radio-group v-model="form.visibility" class="visibility-radio-group">
               <el-radio :label="0">公开</el-radio>
-              <el-radio :label="1">仅教师可见</el-radio>
-              <el-radio :label="2">仅学生可见</el-radio>
+              <!-- 教师发布科研/竞赛项目：只能选择公开和仅学生可见 -->
+              <el-radio 
+                v-if="userStore.isTeacher && (form.post_type === 'research' || form.post_type === 'competition')" 
+                :label="2"
+              >
+                仅学生可见
+              </el-radio>
+              <!-- 学生发布个人技能项目：只能选择公开和仅教师可见 -->
+              <el-radio 
+                v-if="userStore.isStudent && form.post_type === 'personal'" 
+                :label="1"
+              >
+                仅教师可见
+              </el-radio>
             </el-radio-group>
             <div class="visibility-tip">
               <span v-if="form.visibility === 0">所有用户的项目列表都会显示该项目</span>
@@ -275,7 +287,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/store/user'
 import { Plus, Upload, Check, Refresh, Delete } from '@element-plus/icons-vue'
@@ -684,6 +696,24 @@ const handleCreateTag = async () => {
   }
 }
 
+// 监听项目类型和可见权限，确保可见权限符合要求
+watch(() => [form.post_type, form.visibility], ([newPostType, newVisibility]) => {
+  // 教师发布科研/竞赛项目：只能选择公开(0)和仅学生可见(2)
+  if (userStore.isTeacher && (newPostType === 'research' || newPostType === 'competition')) {
+    if (newVisibility === 1) {
+      // 如果选择的是仅教师可见，自动改为公开
+      form.visibility = 0
+    }
+  }
+  // 学生发布个人技能项目：只能选择公开(0)和仅教师可见(1)
+  else if (userStore.isStudent && newPostType === 'personal') {
+    if (newVisibility === 2) {
+      // 如果选择的是仅学生可见，自动改为公开
+      form.visibility = 0
+    }
+  }
+}, { immediate: true })
+
 onMounted(async () => {
   // 检查用户是否有未完成的合作流程
   try {
@@ -706,6 +736,18 @@ onMounted(async () => {
   } else if (userStore.isTeacher && form.post_type === 'personal') {
     form.post_type = 'research'
   }
+  
+  // 确保初始可见权限符合要求
+  if (userStore.isTeacher && (form.post_type === 'research' || form.post_type === 'competition')) {
+    if (form.visibility === 1) {
+      form.visibility = 0
+    }
+  } else if (userStore.isStudent && form.post_type === 'personal') {
+    if (form.visibility === 2) {
+      form.visibility = 0
+    }
+  }
+  
   loadTags()
 })
 
