@@ -259,7 +259,7 @@ const handleApprove = async (coop) => {
     })
 
     // 根据角色判断调用哪个API
-    if (coop.role === 0) {
+    if (coop.role == 0) {
       // 邀请：学生同意邀请
       await agreeInvite({ cooperation_id: coop.cooperation_id })
     } else {
@@ -286,7 +286,7 @@ const handleReject = async (coop) => {
     })
 
     // 根据角色调用对应的拒绝API
-    if (coop.role === 0) {
+    if (coop.role == 0) {
       // 邀请：学生拒绝邀请
       await rejectInvitation({ cooperation_id: coop.cooperation_id })
     } else {
@@ -313,7 +313,7 @@ const handleCancel = async (coop) => {
     })
 
     // 根据角色调用对应的取消API
-    if (coop.role === 0) {
+    if (coop.role == 0) {
       // 邀请：取消邀请
       await cancelInvite({ cooperation_id: coop.cooperation_id })
     } else {

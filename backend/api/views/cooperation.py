@@ -551,7 +551,7 @@ def agree_invite(request):
             )
         
         # 检查是否是邀请（role=True）
-        if not cooperation.role:
+        if cooperation.role!=0:
             return Response(
                 {"error": "此记录不是邀请"},
                 status=status.HTTP_400_BAD_REQUEST
