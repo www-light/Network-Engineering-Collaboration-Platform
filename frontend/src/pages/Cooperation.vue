@@ -286,7 +286,7 @@ const handleReject = async (coop) => {
     })
 
     // 根据角色调用对应的拒绝API
-    if (coop.role === 0) {
+    if (coop.role == 0) {
       // 邀请：学生拒绝邀请
       await rejectInvitation({ cooperation_id: coop.cooperation_id })
     } else {
