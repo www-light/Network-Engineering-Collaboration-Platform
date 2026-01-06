@@ -191,7 +191,6 @@ def get_user_info(request, user_id):
     {
         "code": 200,
         "data": {
-            "user_id": 1,
             "identity": 1,  # 0-学生, 1-教师
             "name": "教师姓名",
             "account": "教工号或学号",
@@ -225,7 +224,6 @@ def get_user_info(request, user_id):
         try:
             student = StudentEntity.objects.get(user_id=user_id)
             data = {
-                'user_id': user.user_id,
                 'identity': user.identity,
                 'name': student.student_name,
                 'account': student.student_id,
@@ -280,7 +278,6 @@ def get_user_info(request, user_id):
         try:
             teacher = TeacherEntity.objects.get(user_id=user_id)
             data = {
-                'user_id': user.user_id,
                 'identity': user.identity,
                 'name': teacher.teacher_name,
                 'account': teacher.teacher_id,
