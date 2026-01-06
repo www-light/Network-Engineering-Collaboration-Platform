@@ -313,7 +313,7 @@ const handleCancel = async (coop) => {
     })
 
     // 根据角色调用对应的取消API
-    if (coop.role === 0) {
+    if (coop.role == 0) {
       // 邀请：取消邀请
       await cancelInvite({ cooperation_id: coop.cooperation_id })
     } else {
