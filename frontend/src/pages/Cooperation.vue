@@ -215,7 +215,9 @@ const canApprove = (coop) => {
   
   // role=0: 邀请（教师发起，学生接收） - 学生可以同意
   // role=1: 申请（学生发起，教师接收） - 教师可以同意
-  if (coop.role === 0) {
+  console.log('canApprove check:', coop, isStudent.value, isTeacher.value)
+  console.log('coop.role:', coop.role)
+  if (!coop.role) {
     return isStudent.value // 邀请由学生同意
   } else {
     return isTeacher.value // 申请由教师同意
@@ -228,7 +230,7 @@ const canReject = (coop) => {
   
   // role=0: 邀请（教师发起，学生接收） - 学生可以拒绝
   // role=1: 申请（学生发起，教师接收） - 教师可以拒绝
-  if (coop.role === 0) {
+  if (!coop.role) {
     return isStudent.value // 邀请由学生拒绝
   } else {
     return isTeacher.value // 申请由教师拒绝
@@ -241,7 +243,7 @@ const canCancel = (coop) => {
   
   // role=0: 邀请（教师发起） - 教师可以取消
   // role=1: 申请（学生发起） - 学生可以取消
-  if (coop.role === 0) {
+  if (!coop.role) {
     return isTeacher.value // 邀请由教师取消
   } else {
     return isStudent.value // 申请由学生取消
