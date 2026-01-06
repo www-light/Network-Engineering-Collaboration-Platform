@@ -34,3 +34,11 @@ export const updateUserProfile = (data) => {
     data
   })
 }
+
+// 获取指定用户的基本信息（不需要登录）
+export const getUserInfo = (user_id) => {
+  return request({
+    url: `/auth/user/${user_id}`,
+    method: 'GET'
+  })
+}

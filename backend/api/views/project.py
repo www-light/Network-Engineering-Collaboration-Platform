@@ -635,8 +635,8 @@ def list_projects(request):
                     'attachments': attachments_dict.get(post.post_id, []),  # 附件列表
                     'recruit_status': post.recruit_status  # 招募状态（个人技能项目也有此字段，但通常不显示）
                 }
-                # 技能评分仅在学生端可见
-                if current_user_identity == 0:
+                # 技能评分仅在教师端可见
+                if current_user_identity == 1:
                     project_data['skill_score'] = score_payload['total_score']
             
             # 如果无法获取项目信息，跳过
@@ -865,8 +865,8 @@ def get_project_detail(request, post_id):
                     'student_user_id': StudentEntity.objects.get(student_id=skill.student_id).user_id,
                     'tags': tags_list  # 添加标签列表
                 })
-                # 技能评分仅学生端可见
-                if current_user and getattr(current_user, 'identity', None) == 0:
+                # 技能评分仅教师端可见
+                if current_user and getattr(current_user, 'identity', None) == 1:
                     result['skill_score'] = score_payload['total_score']
                     result['skill_score_detail'] = {
                         'keyword_score': score_payload['keyword_score'],
