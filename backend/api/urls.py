@@ -2,7 +2,7 @@ from django.urls import path
 from .views import (
     health_check, register, login, user_profile, like, unlike, favorite, unfavorite, comment, list_comments,
     create_conversation, list_conversations, close_conversation,
-    send_message, list_messages, auto_reply_settings,
+    send_message, list_messages, auto_reply_settings, stream_messages,
     tags,
     list_projects, get_project_detail, update_recruit_status, time_match_overview, time_match_overview,
     publish_research, publish_competition, publish_personal,
@@ -49,6 +49,7 @@ urlpatterns = [
     path('conversations/<int:conversation_id>/close', close_conversation, name='close_conversation'),
     path('conversations/<int:conversation_id>/messages', send_message, name='send_message'),
     path('conversations/<int:conversation_id>/messages/lists', list_messages, name='list_messages'),
+    path('conversations/<int:conversation_id>/stream', stream_messages, name='stream_messages'),
     path('conversations/auto_reply/settings', auto_reply_settings, name='auto_reply_settings'),
     
     # 标签

@@ -177,7 +177,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch, nextTick, defineOptions } from 'vue'
+import { ref, onMounted, watch, nextTick, defineOptions, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
 
 defineOptions({ name: 'MessagePage' })
@@ -204,6 +204,7 @@ const autoReplyEnabled = ref(false)
 const autoReplyMessage = ref('')
 const loadingAutoReply = ref(false)
 const isClosed = ref(false)
+let eventSource = null  // SSE 连接
 
 onMounted(() => {
   loadConversations()
@@ -215,11 +216,78 @@ onMounted(() => {
   }
 })
 
-watch(selectedConversationId, (newId) => {
+onBeforeUnmount(() => {
+  // 组件销毁时关闭 SSE 连接
+  closeSSE()
+})
+
+watch(selectedConversationId, (newId, oldId) => {
+  if (oldId !== null) {
+    closeSSE()  // 关闭旧的 SSE 连接
+  }
   if (newId) {
     loadMessages()
+    connectSSE(newId)  // 建立新的 SSE 连接
   }
 })
+
+// 建立 SSE 连接，实时接收消息
+const connectSSE = (conversationId) => {
+  const token = localStorage.getItem('token')
+  if (!token) {
+    console.error('未找到 token，无法建立 SSE 连接')
+    return
+  }
+
+  const url = `/api/conversations/${conversationId}/stream?token=${encodeURIComponent(token)}`
+  eventSource = new EventSource(url)
+
+  eventSource.onmessage = (event) => {
+    try {
+      const newMessage = JSON.parse(event.data)
+      
+      // 检查消息是否已存在（避免重复添加）
+      const exists = messages.value.some(m => m.message_id === newMessage.message_id)
+      if (!exists) {
+        messages.value.push(normalizeMessage(newMessage))
+        nextTick(() => scrollToBottom())
+        
+        // 如果不是自己发送的消息，播放提示音或显示通知
+        if (newMessage.sender_id !== userStore.userInfo?.user_id) {
+          ElMessage.info('收到新消息')
+        }
+      }
+    } catch (error) {
+      console.error('解析 SSE 消息失败:', error)
+    }
+  }
+
+  eventSource.onerror = (error) => {
+    console.error('SSE 连接错误:', error)
+    closeSSE()
+    
+    // 5 秒后自动重连
+    setTimeout(() => {
+      if (selectedConversationId.value === conversationId) {
+        console.log('尝试重新连接 SSE...')
+        connectSSE(conversationId)
+      }
+    }, 5000)
+  }
+
+  eventSource.onopen = () => {
+    console.log('SSE 连接已建立')
+  }
+}
+
+// 关闭 SSE 连接
+const closeSSE = () => {
+  if (eventSource) {
+    eventSource.close()
+    eventSource = null
+    console.log('SSE 连接已关闭')
+  }
+}
 
 const loadConversations = async () => {
   loading.value = true
@@ -278,38 +346,26 @@ const handleSend = async () => {
   
   sending.value = true
   try {
-    const newMessages = []
     // 先发文本（如果有）
     if (hasText) {
-      const res = await sendMessage(selectedConversationId.value, {
+      await sendMessage(selectedConversationId.value, {
         type: 'text',
         content: inputMessage.value
       })
-      if (res?.messages) newMessages.push(...res.messages)
     }
 
     // 再发文件（如果有）
     if (hasFile) {
       const fileContent = pendingFile.value.download_url || pendingFile.value.attachment_id
-      const res = await sendMessage(selectedConversationId.value, {
+      await sendMessage(selectedConversationId.value, {
         type: 'file',
         content: fileContent
       })
-      if (res?.messages) newMessages.push(...res.messages)
     }
 
-    // 合并新消息（包含可能的自动回复），按时间排序
-    if (newMessages.length) {
-      const normalized = newMessages.map(normalizeMessage)
-      messages.value = [...messages.value, ...normalized].sort((a, b) => new Date(a.create_time) - new Date(b.create_time))
-    } else {
-      await loadMessages(true)
-    }
-
+    // SSE 会自动推送消息到界面，不需要手动添加
     inputMessage.value = ''
     pendingFile.value = null
-    await nextTick()
-    scrollToBottom()
   } catch (error) {
     ElMessage.error('发送失败')
     console.error(error)

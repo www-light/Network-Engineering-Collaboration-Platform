@@ -10,7 +10,8 @@ from .conversation import (
     close_conversation,
     send_message,
     list_messages,
-    auto_reply_settings
+    auto_reply_settings,
+    stream_messages,
 )
 from .tag import tags
 from .project import list_projects, get_project_detail, update_recruit_status, publish_research, publish_competition, publish_personal, time_match_overview
@@ -43,4 +44,5 @@ __all__ = [
     'download_attachment',
     'time_match_overview',
     'user_profile',
+    'stream_messages'
 ]

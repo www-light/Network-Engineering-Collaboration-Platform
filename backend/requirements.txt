@@ -2,4 +2,6 @@ Django==4.2.7
 djangorestframework==3.14.0
 django-cors-headers==4.3.1
 python-dotenv==1.0.0
-PyMySQL==1.1.0cryptography>=41.0.0
+PyMySQL==1.1.0
+cryptography>=41.0.0
+redis>=5.0.0

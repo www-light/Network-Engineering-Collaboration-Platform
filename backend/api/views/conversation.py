@@ -5,6 +5,7 @@ import os
 from django.db import transaction
 from django.utils import timezone
 from django.db.models import Q
+from django.http import StreamingHttpResponse
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
@@ -15,6 +16,7 @@ from ..models.message import Conversation, Message
 from ..models.user import User,StudentEntity,TeacherEntity
 from ..models.post import PostEntity
 from ..utils.auth import login_required, check_conversation_permission
+from ..utils.redis_client import publish_message, get_pubsub
 
 
 # 消息加密工具类
@@ -327,25 +329,24 @@ def send_message(request, conversation_id):
         conversation.last_message_at = now
         conversation.save(update_fields=['last_message_at'])
     
-    # 返回本次产生的消息，便于前端即时渲染
-    # 注意：返回给前端时要解密内容
-    return Response(
+    # 将本次产生的消息解密并推送到 Redis 频道
+    message_payloads = [
         {
-            'messages': [
-                {
-                    'message_id': m.message_id,
-                    'conversation_id': m.conversation_id,
-                    'sender_id': m.sender_id,
-                    'content_type': str(m.content_type),
-                    'content': encryptor.decrypt(m.content),  # 返回前解密
-                    'is_read': m.is_read,
-                    'create_time': m.create_time.isoformat()
-                }
-                for m in created_messages
-            ]
-        },
-        status=status.HTTP_200_OK
-    )
+            'message_id': m.message_id,
+            'conversation_id': m.conversation_id,
+            'sender_id': m.sender_id,
+            'content_type': str(m.content_type),
+            'content': encryptor.decrypt(m.content),  # 返回前解密
+            'is_read': m.is_read,
+            'create_time': m.create_time.isoformat()
+        }
+        for m in created_messages
+    ]
+
+    for payload in message_payloads:
+        publish_message(conversation.conversation_id, payload)
+    
+    return Response({'messages': message_payloads}, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])
@@ -429,6 +430,66 @@ def list_messages(request, conversation_id):
         })
     
     return Response(result, status=status.HTTP_200_OK)
+
+
+def stream_messages(request, conversation_id):
+    """SSE 推流，使会话双方实时收到新消息
+    
+    GET /conversations/{conversation_id}/stream?token=xxx
+    查询参数:
+    token: 认证令牌
+    """
+    # 从查询参数获取 token（EventSource 不支持自定义请求头）
+    token = request.GET.get('token')
+    if not token:
+        return Response(
+            {'code': 401, 'msg': '未提供认证令牌'},
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+    
+    # 手动验证 token
+    from ..utils.auth import verify_token
+    user = verify_token(token)
+    if not user:
+        return Response(
+            {'code': 401, 'msg': '认证失败'},
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+    
+    try:
+        conversation = Conversation.objects.get(conversation_id=conversation_id)
+        if not check_conversation_permission(user, conversation):
+            return Response(
+                {'code': 403, 'msg': '无权访问此会话'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+    except Conversation.DoesNotExist:
+        return Response({'code': 404, 'msg': '会话不存在'}, status=status.HTTP_404_NOT_FOUND)
+
+    def event_stream():
+        pubsub = get_pubsub()
+        channel = f"conversation:{conversation_id}"
+        pubsub.subscribe(channel)
+        try:
+            while True:
+                message = pubsub.get_message(timeout=10.0)
+                if message is None:
+                    yield ": keep-alive\n\n"
+                    continue
+                data = message.get('data')
+                if isinstance(data, bytes):
+                    data = data.decode('utf-8', errors='ignore')
+                yield f"data: {data}\n\n"
+        except GeneratorExit:
+            # Client disconnected
+            pass
+        finally:
+            pubsub.close()
+
+    response = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
+    response['Cache-Control'] = 'no-cache'
+    response['X-Accel-Buffering'] = 'no'
+    return response
 
 
 @api_view(['GET', 'PATCH'])

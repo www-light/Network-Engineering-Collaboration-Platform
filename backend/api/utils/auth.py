@@ -36,6 +36,25 @@ def get_user_from_token(request):
         return None
 
 
+def verify_token(token):
+    """验证 token 并返回用户对象（用于 SSE 等无法使用请求头的场景）
+    
+    Args:
+        token: 字符串形式的 token
+    
+    Returns:
+        User对象 或 None
+    """
+    if not token:
+        return None
+    
+    try:
+        user = User.objects.get(token=token)
+        return user
+    except User.DoesNotExist:
+        return None
+
+
 def login_required(view_func):
     """登录验证装饰器
     
