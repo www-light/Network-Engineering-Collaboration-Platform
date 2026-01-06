@@ -342,9 +342,6 @@
       </div>
       <div v-else-if="userInfo">
         <el-descriptions :column="2" border>
-          <el-descriptions-item label="用户ID">
-            {{ userInfo.user_id }}
-          </el-descriptions-item>
           <el-descriptions-item label="身份">
             <el-tag :type="userInfo.identity === 1 ? 'success' : 'info'" effect="light">
               {{ userInfo.identity === 1 ? '教师' : '学生' }}
