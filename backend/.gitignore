@@ -30,7 +30,7 @@ db.sqlite3
 db.sqlite3-journal
 /media
 /staticfiles
-/uploads/*
+/meadia/uploads/*
 !/media/uploads/.gitkeep
 # Environment
 .venv
