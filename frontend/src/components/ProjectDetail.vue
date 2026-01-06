@@ -59,10 +59,14 @@
               {{ getTitle() }}
             </el-descriptions-item>
             <el-descriptions-item v-if="detail.post_type !== 'personal'" label="发布人">
-              {{ getPublisherName() }}
+              <el-link type="primary" @click="handlePublisherClick" :underline="false" style="cursor: pointer;">
+                {{ getPublisherName() }}
+              </el-link>
             </el-descriptions-item>
             <el-descriptions-item v-if="detail.post_type === 'personal'" label="发布人">
-              {{ getPublisherName() }}
+              <el-link type="primary" @click="handlePublisherClick" :underline="false" style="cursor: pointer;">
+                {{ getPublisherName() }}
+              </el-link>
             </el-descriptions-item>
             <template v-if="detail.post_type === 'research'">
               <el-descriptions-item label="研究方向">
@@ -96,20 +100,6 @@
               </el-descriptions-item>
               <el-descriptions-item label="联系方式" :span="2">
                 {{ detail.contact }}
-              </el-descriptions-item>
-              <el-descriptions-item
-                v-if="isStudent && detail.teacher_success_rate !== undefined"
-                label="组队成功率"
-                :span="2"
-              >
-                <el-progress
-                  :percentage="detail.teacher_success_rate || 0"
-                  :color="getSuccessRateColor(detail.teacher_success_rate)"
-                  :stroke-width="8"
-                />
-                <span class="stat-text">
-                  {{ detail.teacher_approved_cooperations || 0 }}/{{ detail.teacher_total_cooperations || 0 }}
-                </span>
               </el-descriptions-item>
               <el-descriptions-item v-if="detail.attachments && detail.attachments.length > 0" label="附件" :span="2">
                 <div class="attachments-list">
@@ -146,20 +136,6 @@
               </el-descriptions-item>
               <el-descriptions-item label="奖励" :span="2">
                 {{ detail.reward }}
-              </el-descriptions-item>
-              <el-descriptions-item
-                v-if="isStudent && detail.teacher_success_rate !== undefined"
-                label="组队成功率"
-                :span="2"
-              >
-                <el-progress
-                  :percentage="detail.teacher_success_rate || 0"
-                  :color="getSuccessRateColor(detail.teacher_success_rate)"
-                  :stroke-width="8"
-                />
-                <span class="stat-text">
-                  {{ detail.teacher_approved_cooperations || 0 }}/{{ detail.teacher_total_cooperations || 0 }}
-                </span>
               </el-descriptions-item>
               <el-descriptions-item v-if="detail.attachments && detail.attachments.length > 0" label="附件" :span="2">
                 <div class="attachments-list">
@@ -353,6 +329,89 @@
       </el-card>
     </div>
     <el-empty v-else description="暂无项目详情" />
+    
+    <!-- 用户信息对话框 -->
+    <el-dialog
+      v-model="showUserInfoDialog"
+      title="用户基本信息"
+      width="600px"
+      :close-on-click-modal="true"
+    >
+      <div v-if="userInfoLoading" style="text-align: center; padding: 40px;">
+        <el-skeleton :rows="5" animated />
+      </div>
+      <div v-else-if="userInfo">
+        <el-descriptions :column="2" border>
+          <el-descriptions-item label="用户ID">
+            {{ userInfo.user_id }}
+          </el-descriptions-item>
+          <el-descriptions-item label="身份">
+            <el-tag :type="userInfo.identity === 1 ? 'success' : 'info'" effect="light">
+              {{ userInfo.identity === 1 ? '教师' : '学生' }}
+            </el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="账号">
+            {{ userInfo.account }}
+          </el-descriptions-item>
+          <el-descriptions-item label="姓名">
+            {{ userInfo.name }}
+          </el-descriptions-item>
+          <el-descriptions-item v-if="userInfo.identity === 0" label="年级" :span="2">
+            {{ getGradeName(userInfo.grade) }}
+          </el-descriptions-item>
+          <el-descriptions-item v-if="userInfo.identity === 1" label="职称" :span="2">
+            {{ userInfo.title }}
+          </el-descriptions-item>
+          <el-descriptions-item v-if="userInfo.identity === 1" label="往期指导成果" :span="2">
+            <div v-if="userInfo.past_achievements" style="white-space: pre-wrap; word-wrap: break-word;">{{ userInfo.past_achievements }}</div>
+            <div v-else style="color: #909399;">暂无成果信息</div>
+          </el-descriptions-item>
+          <!-- 学生查看教师时显示组队成功率 -->
+          <el-descriptions-item 
+            v-if="userInfo.identity === 1 && isStudent && userInfo.teacher_success_rate !== undefined" 
+            label="组队成功率" 
+            :span="2"
+          >
+            <el-progress
+              :percentage="userInfo.teacher_success_rate || 0"
+              :color="getSuccessRateColor(userInfo.teacher_success_rate)"
+              :stroke-width="8"
+            />
+            <span class="stat-text">
+              {{ userInfo.teacher_approved_cooperations || 0 }}/{{ userInfo.teacher_total_cooperations || 0 }}
+            </span>
+          </el-descriptions-item>
+          <!-- 教师查看学生时显示技能评分和技能列表 -->
+          <el-descriptions-item 
+            v-if="userInfo.identity === 0 && isTeacher && userInfo.skill_score !== undefined" 
+            label="最近技能评分" 
+            :span="2"
+          >
+            <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+              <el-tag type="success" size="default" effect="light">
+                评分 {{ formatScore(userInfo.skill_score) }}
+              </el-tag>
+              <el-tag
+                v-for="(skill, index) in (userInfo.latest_skills || [])"
+                :key="'skill-' + index"
+                type="primary"
+                size="small"
+              >
+                {{ skill.skill_name }} ({{ getSkillDegreeText(skill.skill_degree) }})
+              </el-tag>
+            </div>
+          </el-descriptions-item>
+        </el-descriptions>
+      </div>
+      <div v-else style="text-align: center; padding: 40px;">
+        <el-empty description="用户信息不存在" />
+      </div>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button type="primary" @click="showUserInfoDialog = false">关闭</el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -364,6 +423,7 @@ import { downloadFile, getProjectDetail, getTimeMatch, updateRecruitStatus } fro
 import { getComments } from '@/api/post'
 import { ElMessage, ElMessageBox, ElRadioGroup, ElRadio } from 'element-plus'
 import { useUserStore } from '@/store/user'
+import { getUserInfo } from '@/api/auth'
 
 
 const emit = defineEmits(['apply', 'message', 'like', 'favorite', 'comment', 'update:detail'])
@@ -375,6 +435,9 @@ const commentsLoading = ref(false)
 const recruitStatusLoading = ref(false)
 const isTeacher = computed(() => userStore.userInfo?.identity === 1)
 const isStudent = computed(() => userStore.userInfo?.identity === 0)
+const showUserInfoDialog = ref(false)
+const userInfo = ref(null)
+const userInfoLoading = ref(false)
 
 const props = defineProps({
   detail: {
@@ -521,6 +584,54 @@ const getPublisherName = () => {
     return props.detail.student_name || '未知'
   }
   return ''
+}
+
+const getPublisherUserId = () => {
+  if (!props.detail) return null
+  if (props.detail.post_type === 'research' || props.detail.post_type === 'competition') {
+    return props.detail.teacher_user_id
+  } else if (props.detail.post_type === 'personal') {
+    return props.detail.student_user_id
+  }
+  return null
+}
+
+const getGradeName = (grade) => {
+  const gradeMap = {
+    1: '大一',
+    2: '大二',
+    3: '大三',
+    4: '大四'
+  }
+  return gradeMap[grade] || '未知'
+}
+
+const handlePublisherClick = async () => {
+  const userId = getPublisherUserId()
+  if (!userId) {
+    ElMessage.warning('无法获取发布者信息')
+    return
+  }
+  
+  showUserInfoDialog.value = true
+  userInfoLoading.value = true
+  userInfo.value = null
+  
+  try {
+    const response = await getUserInfo(userId)
+    if (response.code === 200) {
+      userInfo.value = response.data
+    } else {
+      ElMessage.error(response.msg || '获取用户信息失败')
+      userInfo.value = null
+    }
+  } catch (error) {
+    console.error('获取用户信息失败:', error)
+    ElMessage.error('获取用户信息失败')
+    userInfo.value = null
+  } finally {
+    userInfoLoading.value = false
+  }
 }
 
 const formatDate = (dateStr) => {
