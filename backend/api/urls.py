@@ -1,6 +1,6 @@
 from django.urls import path
 from .views import (
-    health_check, register, login, user_profile, like, unlike, favorite, unfavorite, comment, list_comments,
+    health_check, register, login, user_profile, get_user_info, like, unlike, favorite, unfavorite, comment, list_comments,
     create_conversation, list_conversations, close_conversation,
     send_message, list_messages, auto_reply_settings, stream_messages,
     tags,
@@ -20,6 +20,7 @@ urlpatterns = [
     path('auth/register', register, name='register'),
     path('auth/login', login, name='login'),
     path('auth/profile', user_profile, name='user_profile'),
+    path('auth/user/<int:user_id>', get_user_info, name='get_user_info'),
     path('post/like', like, name='post_like'),
     path('post/unlike', unlike, name='post_unlike'),
     path('post/favorite', favorite, name='post_favorite'),

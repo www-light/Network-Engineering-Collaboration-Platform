@@ -35,20 +35,22 @@
             </el-tag>
           </div>
           <!-- 个人技能：显示技能和熟练度 -->
-          <div v-if="project.post_type === 'personal' && project.skills && project.skills.length > 0" class="header-tags">
-            <el-tag
-              v-for="(skill, index) in project.skills.slice(0, 2)"
-              :key="'skill-' + index"
-              size="small"
-              type="primary"
-              effect="plain"
-              style="margin-left: 4px;"
-            >
-              {{ truncateText(skill.skill_name + '(' + (skill.skill_degree === 'skillful' ? '熟练' : '了解') + ')') }}
-            </el-tag>
-          </div>
-          <div v-if="isStudent && project.post_type === 'personal' && project.skill_score !== undefined" class="score-pill">
-            评分 {{ formatScore(project.skill_score) }}
+          <div v-if="project.post_type === 'personal'" class="skills-section">
+            <div v-if="project.skills && project.skills.length > 0" class="header-tags">
+              <el-tag
+                v-for="(skill, index) in project.skills.slice(0, 2)"
+                :key="'skill-' + index"
+                size="small"
+                type="primary"
+                effect="plain"
+                style="margin-left: 4px;"
+              >
+                {{ truncateText(skill.skill_name + '(' + (skill.skill_degree === 'skillful' ? '熟练' : '了解') + ')') }}
+              </el-tag>
+            </div>
+            <div v-if="!isStudent && project.skill_score !== undefined" class="score-pill">
+              评分 {{ formatScore(project.skill_score) }}
+            </div>
           </div>
         </div>
       </div>
@@ -224,6 +226,13 @@ const truncateText = (text) => {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
+  gap: 4px;
+}
+
+.skills-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
   gap: 4px;
 }
 

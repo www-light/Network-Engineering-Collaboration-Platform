@@ -1,7 +1,7 @@
 """Views module - organize all API view functions"""
 
 from .health import health_check
-from .auth import register, login, user_profile
+from .auth import register, login, user_profile, get_user_info
 from .post import like, unlike, favorite, unfavorite, comment, list_comments
 from .attachment import upload_attachment, download_attachment
 from .conversation import (
@@ -44,5 +44,6 @@ __all__ = [
     'download_attachment',
     'time_match_overview',
     'user_profile',
+    'get_user_info',
     'stream_messages'
 ]
