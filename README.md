@@ -48,6 +48,10 @@ Network-Engineering-Collaboration-Platform/
 
 ## 快速开始
 
+### 分支选择
+在linux下部署系统，选择dev
+在windows下部署系统，选择main
+
 ### 后端设置
 
 1. 进入后端目录：
@@ -85,15 +89,49 @@ python manage.py makemigrations api
 python manage.py migrate
 ```
 
-1. 创建超级用户（可选）：
+7. 创建超级用户（可选）：
 ```bash
 python manage.py createsuperuser
 ```
 
-1. 启动开发服务器：
+8. 临时屏蔽代理(可选，如果在linux下且有开启代理)
+```bash
+unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY
+```
+
+9. 密钥管理
+#### 密钥存储位置（优先级）
+1. Django settings 中的 `MESSAGE_ENCRYPTION_KEY`
+2. 环境变量 `MESSAGE_ENCRYPTION_KEY`
+
+#### 配置方法
+
+**方法一：在 `settings.py` 中设置**
+```python
+MESSAGE_ENCRYPTION_KEY = 'your-fernet-key-here'
+```
+
+**方法二：使用环境变量（推荐）**
+```bash
+# 在 .env 文件中
+MESSAGE_ENCRYPTION_KEY=your-fernet-key-here
+
+# 或在系统环境变量中设置
+export MESSAGE_ENCRYPTION_KEY=your-fernet-key-here
+```
+
+#### 生成密钥
+```bash
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+# 将输出的密钥添加到 .env 文件的 MESSAGE_ENCRYPTION_KEY
+```
+
+9. 启动开发服务器：
 ```bash
 python manage.py runserver
 ```
+
+
 
 后端服务将在 `http://localhost:8000` 运行
 
