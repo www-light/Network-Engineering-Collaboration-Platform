@@ -5,7 +5,7 @@ import redis
 
 # Shared Redis client for publish/subscribe
 redis_client = redis.Redis.from_url(
-    getattr(settings, "REDIS_URL", "redis://localhost:6379/0"),
+    getattr(settings, "REDIS_URL", "redis://127.0.0.1:6379/0"),
     decode_responses=True,
 )
 
@@ -19,3 +19,5 @@ def publish_message(conversation_id: int, payload: dict) -> None:
 def get_pubsub():
     """Get a pubsub instance; caller is responsible for closing it."""
     return redis_client.pubsub(ignore_subscribe_messages=True)
+
+
