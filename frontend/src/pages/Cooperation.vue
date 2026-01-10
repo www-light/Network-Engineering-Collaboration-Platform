@@ -5,107 +5,140 @@
         <el-icon><Link /></el-icon>
         合作流程
       </h2>
-      <el-button type="primary" @click="handleCheckUnfinished">
-        <el-icon><Search /></el-icon>
-        检查未完成流程
-      </el-button>
     </div>
 
     <el-skeleton v-if="loading" :rows="3" animated />
 
-    <div v-else-if="cooperations.length > 0" class="cooperation-grid">
-      <el-card
-        v-for="coop in cooperations"
-        :key="coop.cooperation_id"
-        shadow="hover"
-        class="cooperation-card"
+    <div v-else-if="groupedCooperations.length > 0" class="cooperation-groups">
+      <!-- 按项目分组显示 -->
+      <div
+        v-for="group in groupedCooperations"
+        :key="group.post_id"
+        class="project-group"
       >
-        <!-- 卡片头部：项目名称和状态标签 -->
-        <template #header>
-          <div class="card-header">
-            <h4 class="project-name">{{ coop.post_name }}</h4>
-            <el-tag :type="getStatusType(coop.status)" effect="light" size="small">
-              {{ getStatusText(coop.status) }}
-            </el-tag>
-          </div>
-        </template>
-
-        <!-- 卡片内容：双方信息 -->
-        <div class="card-content">
-          <div class="info-row">
-            <span class="label">教师：</span>
-            <span class="value">{{ coop.teacher_name }}</span>
-          </div>
-          <div class="info-row">
-            <span class="label">学生：</span>
-            <span class="value">{{ coop.student_name }}</span>
-          </div>
-          <div class="role-badge">
-            <el-tag
-              :type="coop.role === 0 ? 'info' : 'success'"
-              size="small"
-            >
-              {{ coop.role === 0 ? '邀请' : '申请' }}
-            </el-tag>
-          </div>
-        </div>
-
-        <!-- 时间戳 -->
-        <div class="timestamp">
-          <span v-if="coop.confirmed_at">
-            确认时间：{{ formatDate(coop.confirmed_at) }}
-          </span>
-          <span v-else>
-            发起时间：{{ formatDate(coop.created_at) }}
-          </span>
-        </div>
-
-        <!-- 操作按钮 -->
-        <template #footer>
-          <div class="card-footer">
-            <div v-if="coop.status === 2" class="action-buttons">
-              <!-- 待确认状态：根据角色显示不同按钮 -->
-              <el-button
-                v-if="canApprove(coop)"
+        <!-- 项目标题卡 -->
+        <div class="project-title-card">
+          <div class="project-title-content">
+            <h3 class="project-title">{{ group.post_name }}</h3>
+            <div class="group-stats">
+              <el-tag type="info" size="small">总计: {{ group.cooperations.length }}</el-tag>
+              <el-tag
+                v-if="group.pendingCount > 0"
+                type="warning"
+                size="small"
+              >
+                待确认: {{ group.pendingCount }}
+              </el-tag>
+              <el-tag
+                v-if="group.completedCount > 0"
                 type="success"
                 size="small"
-                @click="handleApprove(coop)"
               >
-                <el-icon><Check /></el-icon>
-                同意
-              </el-button>
-              <el-button
-                v-if="canReject(coop)"
-                type="danger"
-                size="small"
-                @click="handleReject(coop)"
-              >
-                <el-icon><Close /></el-icon>
-                拒绝
-              </el-button>
-              <el-button
-                v-if="canCancel(coop)"
-                type="info"
-                size="small"
-                @click="handleCancel(coop)"
-              >
-                <el-icon><Delete /></el-icon>
-                取消
-              </el-button>
-            </div>
-            <div v-else class="status-button">
-              <!-- 已完成/已拒绝/已取消状态 -->
-              <el-button
-                :type="getStatusType(coop.status)"
-                size="small"
-                disabled
-              >
-                {{ getStatusText(coop.status) }}
-              </el-button>
+                已完成: {{ group.completedCount }}
+              </el-tag>
             </div>
           </div>
-        </template>
-      </el-card>
+        </div>
+
+        <!-- 项目下的合作流程卡片 -->
+        <div class="cooperations-grid">
+          <el-card
+            v-for="coop in group.cooperations"
+            :key="coop.cooperation_id"
+            shadow="hover"
+            class="cooperation-card"
+          >
+            <!-- 卡片头部：状态标签 -->
+            <template #header>
+              <div class="card-header">
+                <div class="coop-info">
+                  <span class="coop-type">
+                    <el-tag
+                      :type="coop.role === 0 ? 'info' : 'success'"
+                      size="small"
+                    >
+                      {{ coop.role === 0 ? '邀请' : '申请' }}
+                    </el-tag>
+                  </span>
+                  <span class="coop-status">
+                    <el-tag :type="getStatusType(coop.status)" effect="light" size="small">
+                      {{ getStatusText(coop.status) }}
+                    </el-tag>
+                  </span>
+                </div>
+              </div>
+            </template>
+
+            <!-- 卡片内容：双方信息 -->
+            <div class="card-content">
+              <div class="info-row">
+                <span class="label">教师：</span>
+                <span class="value">{{ coop.teacher_name }}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">学生：</span>
+                <span class="value">{{ coop.student_name }}</span>
+              </div>
+            </div>
+
+            <!-- 时间戳 -->
+            <div class="timestamp">
+              <span v-if="coop.confirmed_at">
+                确认时间：{{ formatDate(coop.confirmed_at) }}
+              </span>
+              <span v-else>
+                发起时间：{{ formatDate(coop.created_at) }}
+              </span>
+            </div>
+
+            <!-- 操作按钮 -->
+            <template #footer>
+              <div class="card-footer">
+                <div v-if="coop.status === 2" class="action-buttons">
+                  <!-- 待确认状态：根据角色显示不同按钮 -->
+                  <el-button
+                    v-if="canApprove(coop)"
+                    type="success"
+                    size="small"
+                    @click="handleApprove(coop)"
+                  >
+                    <el-icon><Check /></el-icon>
+                    同意
+                  </el-button>
+                  <el-button
+                    v-if="canReject(coop)"
+                    type="danger"
+                    size="small"
+                    @click="handleReject(coop)"
+                  >
+                    <el-icon><Close /></el-icon>
+                    拒绝
+                  </el-button>
+                  <el-button
+                    v-if="canCancel(coop)"
+                    type="info"
+                    size="small"
+                    @click="handleCancel(coop)"
+                  >
+                    <el-icon><Delete /></el-icon>
+                    取消
+                  </el-button>
+                </div>
+                <div v-else class="status-button">
+                  <!-- 已完成/已拒绝/已取消状态 -->
+                  <el-button
+                    :type="getStatusType(coop.status)"
+                    size="small"
+                    disabled
+                  >
+                    {{ getStatusText(coop.status) }}
+                  </el-button>
+                </div>
+              </div>
+            </template>
+          </el-card>
+        </div>
+      </div>
     </div>
 
     <!-- 空状态 -->
@@ -131,7 +164,6 @@ import { ref, computed, onMounted } from 'vue'
 import { useUserStore } from '@/store/user'
 import {
   listCooperations,
-  checkUnfinished,
   approveApplication,
   rejectApplication,
   rejectInvitation,
@@ -160,6 +192,39 @@ const totalPages = ref(0)
 const userInfo = computed(() => userStore.userInfo)
 const isTeacher = computed(() => userInfo.value?.identity === 1)
 const isStudent = computed(() => userInfo.value?.identity === 0)
+
+// 计算分组后的合作流程
+const groupedCooperations = computed(() => {
+  const groups = {}
+  
+  // 按 post_id 分组
+  cooperations.value.forEach(coop => {
+    const postId = coop.post_id
+    if (!groups[postId]) {
+      groups[postId] = {
+        post_id: postId,
+        post_name: coop.post_name,
+        cooperations: [],
+        pendingCount: 0,
+        completedCount: 0
+      }
+    }
+    
+    groups[postId].cooperations.push(coop)
+    
+    // 统计状态
+    if (coop.status === 2) {
+      groups[postId].pendingCount++
+    } else if (coop.status === 3) {
+      groups[postId].completedCount++
+    }
+  })
+  
+  // 转换为数组并按项目名称排序
+  return Object.values(groups).sort((a, b) => {
+    return a.post_name.localeCompare(b.post_name, 'zh-CN')
+  })
+})
 
 onMounted(() => {
   loadCooperations()
@@ -193,21 +258,6 @@ const handlePageSizeChange = (newPageSize) => {
   loadCooperations()
 }
 
-const handleCheckUnfinished = async () => {
-  try {
-    const response = await checkUnfinished()
-    // 后端直接返回数据对象，不需要 .data
-    if (response.has_unfinished) {
-      ElMessage.warning('存在未完成的合作流程')
-      await loadCooperations()
-    } else {
-      ElMessage.success('没有未完成的合作流程')
-    }
-  } catch (error) {
-    ElMessage.error('检查失败')
-    console.error(error)
-  }
-}
 
 // 判断是否显示"同意"按钮（只有接收方能同意）
 const canApprove = (coop) => {
@@ -390,11 +440,65 @@ const formatDate = (dateStr) => {
   gap: 10px;
 }
 
-.cooperation-grid {
+/* 分组容器 */
+.cooperation-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  animation: fadeIn 0.3s ease-in;
+}
+
+/* 项目分组 */
+.project-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 项目标题卡 */
+.project-title-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  padding: 16px 20px;
+  color: white;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.project-title-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.project-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  flex: 1;
+  word-break: break-word;
+}
+
+.group-stats {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.group-stats :deep(.el-tag) {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: white;
+}
+
+/* 合作流程网格 */
+.cooperations-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 20px;
-  animation: fadeIn 0.3s ease-in;
+  gap: 16px;
+  padding: 0 4px;
 }
 
 @keyframes fadeIn {
@@ -412,6 +516,7 @@ const formatDate = (dateStr) => {
   border-radius: 12px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
+  border-left: 4px solid transparent;
 }
 
 .cooperation-card:hover {
@@ -419,22 +524,30 @@ const formatDate = (dateStr) => {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
+.cooperation-card:hover {
+  border-left-color: #667eea;
+}
+
 .card-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
 }
 
-.project-name {
-  margin: 0;
-  color: #303133;
-  font-size: 16px;
-  font-weight: 600;
+.coop-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   flex: 1;
-  word-break: break-word;
-  max-height: 3em;
-  overflow: hidden;
+}
+
+.coop-type {
+  display: flex;
+}
+
+.coop-status {
+  display: flex;
 }
 
 .card-content {
@@ -450,7 +563,7 @@ const formatDate = (dateStr) => {
 }
 
 .info-row:last-of-type {
-  margin-bottom: 8px;
+  margin-bottom: 0;
 }
 
 .label {
@@ -465,18 +578,13 @@ const formatDate = (dateStr) => {
   word-break: break-all;
 }
 
-.role-badge {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid #ebeef5;
-}
-
 .timestamp {
   font-size: 12px;
   color: #909399;
-  margin-bottom: 12px;
-  padding: 8px 0;
+  margin: 12px 0;
+  padding: 12px 0;
   border-top: 1px solid #ebeef5;
+  border-bottom: 1px solid #ebeef5;
 }
 
 .card-footer {
@@ -498,48 +606,10 @@ const formatDate = (dateStr) => {
   display: flex;
 }
 
-.status-button .el-button {
-  width: 100%;
-}
-
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .cooperation-container {
-    padding: 12px;
-  }
-
-  .cooperation-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-
-  .cooperation-grid {
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 16px;
-  }
-
-  .cooperation-header h2 {
-    font-size: 20px;
-  }
-
-  .action-buttons {
-    flex-direction: column;
-  }
-
-  .action-buttons .el-button {
-    width: 100%;
-    flex: none;
-  }
-}
-
 .pagination-wrapper {
-  margin-top: 20px;
   display: flex;
   justify-content: center;
-  padding: 20px;
-  background: #f5f7fa;
-  border-radius: 12px;
+  margin-top: 30px;
+  padding: 20px 0;
 }
 </style>
-
