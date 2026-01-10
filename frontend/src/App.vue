@@ -61,7 +61,6 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/store/user'
 import { ElMessageBox, ElMessage } from 'element-plus'
-import { checkUnfinished } from '@/api/cooperation'
 import {
   House,
   Document,
@@ -87,17 +86,7 @@ const activeMenu = computed(() => {
 })
 
 const handlePublishClick = async () => {
-  try {
-    const response = await checkUnfinished()
-    if (response.has_unfinished) {
-      ElMessage.error('存在未完成的合作流程，请先完成后再发布')
-      return
-    }
     router.push('/publish')
-  } catch (error) {
-    console.error('检查合作流程失败:', error)
-    ElMessage.error('检查合作流程失败')
-  }
 }
 
 const handleLogout = async () => {
