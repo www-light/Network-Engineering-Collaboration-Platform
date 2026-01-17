@@ -294,7 +294,6 @@ import { Plus, Upload, Check, Refresh, Delete } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getTags, createTag } from '@/api/tag'
 import { publishResearch, publishCompetition, publishPersonal, uploadAttachment } from '@/api/project'
-import { checkUnfinished } from '@/api/cooperation'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -715,21 +714,7 @@ watch(() => [form.post_type, form.visibility], ([newPostType, newVisibility]) =>
 }, { immediate: true })
 
 onMounted(async () => {
-  // 检查用户是否有未完成的合作流程
-  try {
-    const response = await checkUnfinished()
-    if (response.has_unfinished) {
-      ElMessage.error('存在未完成的合作流程，请先完成后再发布')
-      // 返回上一页或首页
-      setTimeout(() => {
-        router.back()
-      }, 1500)
-      return
-    }
-  } catch (error) {
-    console.error('检查合作流程失败:', error)
-  }
-  
+
   // 根据用户身份设置默认项目类型
   if (userStore.isStudent && form.post_type !== 'personal') {
     form.post_type = 'personal'

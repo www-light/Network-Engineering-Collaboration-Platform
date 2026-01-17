@@ -1165,22 +1165,6 @@ def publish_research(request):
     """
     user = request.user
     
-    # 检查用户是否有未完成的合作流程
-    teacher = TeacherEntity.objects.filter(user_id=user.user_id).first()
-    student = StudentEntity.objects.filter(user_id=user.user_id).first()
-    
-    q_objects = models.Q()
-    if teacher:
-        q_objects |= models.Q(teacher_id=teacher.teacher_id)
-    if student:
-        q_objects |= models.Q(student_id=student.student_id)
-    
-    if (teacher or student) and TeacherStudentCooperation.objects.filter(status=2).filter(q_objects).exists():
-        return Response(
-            {'code': 403, 'msg': '存在未完成的合作流程，请先完成后再发布'},
-            status=status.HTTP_403_FORBIDDEN
-        )
-    
     serializer = ResearchPublishSerializer(data=request.data)
     
     if not serializer.is_valid():
@@ -1348,22 +1332,6 @@ def publish_competition(request):
     }
     """
     user = request.user
-    
-    # 检查用户是否有未完成的合作流程
-    teacher = TeacherEntity.objects.filter(user_id=user.user_id).first()
-    student = StudentEntity.objects.filter(user_id=user.user_id).first()
-    
-    q_objects = models.Q()
-    if teacher:
-        q_objects |= models.Q(teacher_id=teacher.teacher_id)
-    if student:
-        q_objects |= models.Q(student_id=student.student_id)
-    
-    if (teacher or student) and TeacherStudentCooperation.objects.filter(status=2).filter(q_objects).exists():
-        return Response(
-            {'code': 403, 'msg': '存在未完成的合作流程，请先完成后再发布'},
-            status=status.HTTP_403_FORBIDDEN
-        )
     
     serializer = CompetitionPublishSerializer(data=request.data)
     
@@ -1562,22 +1530,6 @@ def publish_personal(request):
     }
     """
     user = request.user
-    
-    # 检查用户是否有未完成的合作流程
-    teacher = TeacherEntity.objects.filter(user_id=user.user_id).first()
-    student = StudentEntity.objects.filter(user_id=user.user_id).first()
-    
-    q_objects = models.Q()
-    if teacher:
-        q_objects |= models.Q(teacher_id=teacher.teacher_id)
-    if student:
-        q_objects |= models.Q(student_id=student.student_id)
-    
-    if (teacher or student) and TeacherStudentCooperation.objects.filter(status=2).filter(q_objects).exists():
-        return Response(
-            {'code': 403, 'msg': '存在未完成的合作流程，请先完成后再发布'},
-            status=status.HTTP_403_FORBIDDEN
-        )
     
     serializer = PersonalPublishSerializer(data=request.data)
     

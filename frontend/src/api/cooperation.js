@@ -98,11 +98,4 @@ export const listCooperations = (page = 1, pageSize = 10) => {
   })
 }
 
-// 检查未完成的合作请求
-export const checkUnfinished = () => {
-  return request({
-    url: '/cooperation/check-unfinished',
-    method: 'GET'
-  })
-}
 

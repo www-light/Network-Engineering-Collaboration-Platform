@@ -5,10 +5,6 @@
         <el-icon><Link /></el-icon>
         合作流程
       </h2>
-      <el-button type="primary" @click="handleCheckUnfinished">
-        <el-icon><Search /></el-icon>
-        检查未完成流程
-      </el-button>
     </div>
 
     <el-skeleton v-if="loading" :rows="3" animated />
@@ -131,7 +127,6 @@ import { ref, computed, onMounted } from 'vue'
 import { useUserStore } from '@/store/user'
 import {
   listCooperations,
-  checkUnfinished,
   approveApplication,
   rejectApplication,
   rejectInvitation,
@@ -193,21 +188,6 @@ const handlePageSizeChange = (newPageSize) => {
   loadCooperations()
 }
 
-const handleCheckUnfinished = async () => {
-  try {
-    const response = await checkUnfinished()
-    // 后端直接返回数据对象，不需要 .data
-    if (response.has_unfinished) {
-      ElMessage.warning('存在未完成的合作流程')
-      await loadCooperations()
-    } else {
-      ElMessage.success('没有未完成的合作流程')
-    }
-  } catch (error) {
-    ElMessage.error('检查失败')
-    console.error(error)
-  }
-}
 
 // 判断是否显示"同意"按钮（只有接收方能同意）
 const canApprove = (coop) => {
