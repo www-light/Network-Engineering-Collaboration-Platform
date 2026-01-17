@@ -21,7 +21,7 @@
               <el-icon><Document /></el-icon>
               <span>项目列表</span>
             </el-menu-item>
-            <el-menu-item v-if="userStore.isLoggedIn" @click="handlePublishClick">
+            <el-menu-item v-if="userStore.isLoggedIn" index="/publish" >
               <el-icon><Plus /></el-icon>
               <span>发布项目</span>
             </el-menu-item>
@@ -85,9 +85,6 @@ const activeMenu = computed(() => {
   return route.path
 })
 
-const handlePublishClick = async () => {
-    router.push('/publish')
-}
 
 const handleLogout = async () => {
   try {
